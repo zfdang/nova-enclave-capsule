@@ -12,11 +12,6 @@ Parameters:
     Default: sparsity-xyz
     Description: GitHub organization name
 
-  GitHubRepo:
-    Type: String
-    Default: nova-enclave-capsule
-    Description: GitHub repository name
-
   ECRPublicAlias:
     Type: String
     Default: d4t4u8d2
@@ -58,8 +53,9 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:repository_owner: !Ref GitHubOrg
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrg}/${GitHubRepo}:*'
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrg}/*:*'
       Policies:
         - PolicyName: ECRPublicAccess
           PolicyDocument:
@@ -121,4 +117,4 @@ Outputs:
          - sparsity-ai/capsule-runtime
          - sparsity-ai/capsule-shell
          - sparsity-ai/nitro-cli
-      3. Workflow will use GitHubActionsRoleArn via OIDC
+      3. Any repository in the GitHub organization can assume GitHubActionsRoleArn via OIDC
