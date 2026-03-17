@@ -31,6 +31,7 @@ CAPSULE_CLI_BIN="${CAPSULE_CLI_BIN:-capsule-cli}"
 CAPSULE_CLI_SMOKE_MODE="${CAPSULE_CLI_SMOKE_MODE:-official}"
 PROBE_CONTAINER_ID=""
 FIXTURE_NITRO_CLI_CREATED=0
+NITRO_CLI_FIXTURE_BASE_IMAGE="${NITRO_CLI_FIXTURE_BASE_IMAGE:-alpine:3.20}"
 
 on_exit() {
     status=$?
@@ -60,18 +61,6 @@ build_fixture_images() {
     local capsule_shell_dir="${TMP_DIR}/capsule-shell-fixture"
     local nitro_dir="${TMP_DIR}/nitro-cli-fixture"
     local nitro_rootfs_dir="${nitro_dir}/rootfs"
-    local busybox_path=""
-
-    if [[ "$(uname -s)" != "Linux" ]]; then
-        echo "fixture smoke mode currently requires a Linux host" >&2
-        exit 1
-    fi
-
-    busybox_path="$(command -v busybox || true)"
-    if [[ -z "${busybox_path}" ]]; then
-        echo "fixture smoke mode requires a local busybox binary on Linux" >&2
-        exit 1
-    fi
 
     if docker image inspect "${NITRO_CLI_FIXTURE_TAG}" >/dev/null 2>&1; then
         echo "fixture smoke mode refuses to overwrite existing local image tag: ${NITRO_CLI_FIXTURE_TAG}" >&2
@@ -102,8 +91,6 @@ FROM scratch
 COPY nitro-cli /bin/nitro-cli
 CMD ["/bin/nitro-cli"]
 EOF
-
-    cp "${busybox_path}" "${nitro_rootfs_dir}/bin/busybox"
 
     cat > "${nitro_rootfs_dir}/usr/bin/nitro-cli" <<'EOF'
 #!/bin/sh
@@ -160,11 +147,11 @@ printf '{"Measurements":{"PCR0":"fixture-pcr0","PCR1":"fixture-pcr1","PCR2":"fix
 EOF
     chmod +x "${nitro_rootfs_dir}/usr/bin/nitro-cli"
 
-    cat > "${nitro_dir}/Dockerfile" <<'EOF'
-FROM scratch
-COPY rootfs/ /
+    cat > "${nitro_dir}/Dockerfile" <<EOF
+FROM ${NITRO_CLI_FIXTURE_BASE_IMAGE}
+COPY rootfs/usr/bin/nitro-cli /usr/bin/nitro-cli
 WORKDIR /build
-ENTRYPOINT ["/bin/busybox", "sh", "/usr/bin/nitro-cli"]
+ENTRYPOINT ["/bin/sh", "/usr/bin/nitro-cli"]
 EOF
 
     docker build -t "${CAPSULE_RUNTIME_IMAGE_TAG}" "${capsule_runtime_dir}" >/dev/null
