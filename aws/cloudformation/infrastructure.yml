@@ -12,6 +12,16 @@ Parameters:
     Default: sparsity-xyz
     Description: GitHub organization name
 
+  GitHubRepo:
+    Type: String
+    Default: nova-enclave-capsule
+    Description: GitHub repository name
+
+  GitHubActionsRoleName:
+    Type: String
+    Default: Github-Workflow-Publish-AWS-ECR-Nova-Enclave-Capsule
+    Description: IAM role name used by GitHub Actions for this repository
+
   ECRPublicAlias:
     Type: String
     Default: d4t4u8d2
@@ -19,30 +29,12 @@ Parameters:
 
 Resources:
   #############################################
-  # GitHub OIDC Identity Provider
-  #############################################
-  GitHubOIDCProvider:
-    Type: AWS::IAM::OIDCProvider
-    Properties:
-      Url: https://token.actions.githubusercontent.com
-      ClientIdList:
-        - sts.amazonaws.com
-      ThumbprintList:
-        # GitHub Actions OIDC thumbprints
-        - 6938fd4d98bab03faadb97b34396831e3780aea1
-        - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
-      Tags:
-        - Key: Project
-          Value: !Ref ProjectName
-
-  #############################################
   # IAM Role for GitHub Actions (ECR Publish)
   #############################################
   GitHubActionsECRRole:
     Type: AWS::IAM::Role
-    DependsOn: GitHubOIDCProvider
     Properties:
-      RoleName: Github-Workflow-Publish-AWS-ECR
+      RoleName: !Ref GitHubActionsRoleName
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -53,9 +45,8 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:repository_owner: !Ref GitHubOrg
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrg}/*:*'
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrg}/${GitHubRepo}:*'
       Policies:
         - PolicyName: ECRPublicAccess
           PolicyDocument:
@@ -86,12 +77,16 @@ Resources:
 
 Outputs:
   GitHubOIDCProviderArn:
-    Description: GitHub OIDC Provider ARN
-    Value: !GetAtt GitHubOIDCProvider.Arn
+    Description: Existing GitHub OIDC Provider ARN
+    Value: !Sub 'arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
 
   GitHubActionsRoleArn:
     Description: IAM Role ARN for GitHub Actions (use in workflow role-to-assume)
     Value: !GetAtt GitHubActionsECRRole.Arn
+
+  GitHubActionsRoleName:
+    Description: IAM role name for GitHub Actions
+    Value: !Ref GitHubActionsRoleName
 
   ECRPublicRegistry:
     Description: ECR Public registry URL
@@ -113,8 +108,10 @@ Outputs:
     Description: Setup instructions
     Value: |
       1. Deploy this stack in us-east-1 (required for ECR Public)
-      2. Create ECR Public repositories manually in console:
+      2. Ensure the GitHub OIDC provider already exists in the account:
+        - arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+      3. Create ECR Public repositories manually in console:
          - sparsity-ai/capsule-runtime
          - sparsity-ai/capsule-shell
          - sparsity-ai/nitro-cli
-      3. Any repository in the GitHub organization can assume GitHubActionsRoleArn via OIDC
+      4. Only ${GitHubOrg}/${GitHubRepo} can assume GitHubActionsRoleArn via OIDC

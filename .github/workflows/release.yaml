@@ -105,6 +105,7 @@ jobs:
     env:
       CAPSULE_RUNTIME_IMAGE: public.ecr.aws/d4t4u8d2/sparsity-ai/capsule-runtime
       CAPSULE_SHELL_IMAGE: public.ecr.aws/d4t4u8d2/sparsity-ai/capsule-shell
+      AWS_PUBLISH_ROLE_ARN: arn:aws:iam::004118891089:role/Github-Workflow-Publish-AWS-ECR-Nova-Enclave-Capsule
 
     steps:
       - name: Download Binaries
@@ -127,7 +128,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: us-east-1
-          role-to-assume: arn:aws:iam::004118891089:role/Github-Workflow-Publish-AWS-ECR
+          role-to-assume: ${{ env.AWS_PUBLISH_ROLE_ARN }}
 
       - name: Login to Amazon ECR Public
         id: login-ecr
