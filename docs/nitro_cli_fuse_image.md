@@ -1,17 +1,17 @@
 # Building A FUSE-Enabled Nitro CLI Image
 
-This document explains why Enclaver rebuilds the Nitro CLI image, where the
+This document explains why Nova Enclave Capsule rebuilds the Nitro CLI image, where the
 original enclave kernel blobs come from, how the kernel config is modified to
 enable FUSE, and how the rebuilt blobs are swapped into the final image.
 
 ## Why We Do This
 
-Enclaver supports host-backed directory mounts inside the enclave. The same
+Nova Enclave Capsule supports host-backed directory mounts inside the enclave. The same
 hostfs-backed mechanism can behave like a host-backed temporary directory or a
 persistent directory depending on whether you reuse the bound host state
 directory across runs.
 
-That flow depends on FUSE being available inside the EIF kernel so `odyn` can
+That flow depends on FUSE being available inside the EIF kernel so `capsule-runtime` can
 mount host-backed storage through `/dev/fuse`.
 
 The stock Nitro CLI packages ship prebuilt enclave blobs whose kernel config

@@ -5,6 +5,24 @@ set -euo pipefail
 IMAGE_REF="${1:-}"
 SMOKE_TAG="nitro-cli-smoke-app:${RANDOM}-$$"
 SCRIPT_TMPDIR="$(mktemp -d)"
+SMOKE_BASE_IMAGE="${SMOKE_BASE_IMAGE:-public.ecr.aws/docker/library/alpine:3.20}"
+
+validate_smoke_base_image() {
+    if [[ -z "${SMOKE_BASE_IMAGE}" ]]; then
+        echo "SMOKE_BASE_IMAGE must not be empty" >&2
+        exit 1
+    fi
+
+    if [[ "${SMOKE_BASE_IMAGE}" =~ [[:space:]] ]]; then
+        echo "SMOKE_BASE_IMAGE must be a single image reference without whitespace" >&2
+        exit 1
+    fi
+
+    if [[ ! "${SMOKE_BASE_IMAGE}" =~ ^[A-Za-z0-9][A-Za-z0-9./:_@-]*$ ]]; then
+        echo "SMOKE_BASE_IMAGE contains unsupported characters: ${SMOKE_BASE_IMAGE}" >&2
+        exit 1
+    fi
+}
 
 cleanup() {
     docker image rm -f "${SMOKE_TAG}" >/dev/null 2>&1 || true
@@ -18,10 +36,9 @@ if [[ -z "${IMAGE_REF}" ]]; then
     exit 1
 fi
 
-cat > "${SCRIPT_TMPDIR}/Dockerfile" <<'EOF'
-FROM public.ecr.aws/docker/library/alpine:3.20
-CMD ["echo", "nitro-cli smoke test"]
-EOF
+validate_smoke_base_image
+
+printf 'FROM %s\nCMD ["echo", "nitro-cli smoke test"]\n' "${SMOKE_BASE_IMAGE}" > "${SCRIPT_TMPDIR}/Dockerfile"
 
 docker build -t "${SMOKE_TAG}" "${SCRIPT_TMPDIR}" >/dev/null
 

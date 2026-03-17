@@ -30,7 +30,7 @@ cat > ${config} <<- EOF
 	- listen_port: 8082
 EOF
 
-enclaver build -f ${config}
+capsule-cli build -f ${config}
 docker run --detach --rm \
        --name=nitro_enclave \
        --device=/dev/nitro_enclaves:/dev/nitro_enclaves:rw \

@@ -1,7 +1,7 @@
 ## What is in this directory?
 
 Several tests have been done to evaluate performance of
-enclaver/nitro-enclaves. As part of these tests, a simple Go server
+capsule-cli/nitro-enclaves. As part of these tests, a simple Go server
 runs within the enclave and burns some CPU every time the endpoint
 (`http://localhost:8082/busy`) is fetched.
 

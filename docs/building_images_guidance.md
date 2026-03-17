@@ -1,11 +1,11 @@
-# Building Enclaver Images
+# Building Nova Enclave Capsule Images
 
 This document covers the image-building paths that exist in the repository today:
 
 - local developer images via `scripts/build-docker-images.sh`
 - release-style images via `dockerfiles/*-release.dockerfile`
 - Nitro CLI image rebuilds with a FUSE-enabled enclave kernel
-- the current `enclaver build` handoff from a locally tagged intermediate image to `nitro-cli build-enclave --docker-dir`
+- the current `capsule-cli build` handoff from a locally tagged intermediate image to `nitro-cli build-enclave --docker-dir`
 
 ## Prerequisites
 
@@ -33,14 +33,14 @@ From the repository root:
 This default mode:
 
 - currently requires an `x86_64` host
-- builds `odyn` and `enclaver-run` for `x86_64-unknown-linux-musl`
-- uses `dockerfiles/odyn-dev.dockerfile`
-- uses `dockerfiles/sleeve-dev.dockerfile`
+- builds `capsule-runtime` and `capsule-shell` for `x86_64-unknown-linux-musl`
+- uses `dockerfiles/capsule-runtime-dev.dockerfile`
+- uses `dockerfiles/capsule-shell-dev.dockerfile`
 - produces:
-  - `odyn-dev:latest`
-  - `sleeve-dev:latest`
+  - `capsule-runtime-dev:latest`
+  - `capsule-shell-dev:latest`
 
-The helper is currently `x86_64`-only because the default Sleeve Dockerfiles
+The helper is currently `x86_64`-only because the default Capsule Shell Dockerfiles
 copy `nitro-cli` from the self-hosted Nitro CLI image, and that image is
 currently published only for `linux/amd64`.
 
@@ -52,8 +52,8 @@ Release-style local tags:
 
 This produces:
 
-- `odyn:latest`
-- `sleeve:latest`
+- `capsule-runtime:latest`
+- `capsule-shell:latest`
 
 ## What the helper script actually does
 
@@ -64,22 +64,22 @@ This produces:
    - `aarch64` -> unsupported in the default helper
 2. runs:
    ```bash
-   cross build --target <target> --features run_enclave,odyn [--release]
+   cross build --target <target> --features run_enclave,capsule-runtime [--release]
    ```
-3. copies `odyn` and `enclaver-run` into a temporary Docker build context
-4. builds Odyn and Sleeve images from the selected Dockerfiles
+3. copies `capsule-runtime` and `capsule-shell` into a temporary Docker build context
+4. builds Capsule Runtime and Capsule Shell images from the selected Dockerfiles
 
-## Current `enclaver build` flow
+## Current `capsule-cli build` flow
 
-The current `enclaver build` implementation in `enclaver/src/build.rs` no longer
+The current `capsule-cli build` implementation in `capsule-cli/src/build.rs` no longer
 hands Nitro CLI an unnamed transient image reference.
 
 Instead it:
 
-1. amends the app image with `/sbin/odyn` and `/etc/enclaver/enclaver.yaml`
-2. tags that amended image locally as `enclaver-intermediate-<uuid>:latest`
+1. amends the app image with `/sbin/capsule-runtime` and `/etc/capsule/capsule.yaml`
+2. tags that amended image locally as `capsule-intermediate-<uuid>:latest`
 3. writes a tiny temporary Docker context whose `Dockerfile` is just `FROM <that-local-tag>`
-4. runs `nitro-cli build-enclave --docker-dir /build/docker-context --docker-uri enclaver-eif-build-<uuid>:latest`
+4. runs `nitro-cli build-enclave --docker-dir /build/docker-context --docker-uri capsule-eif-build-<uuid>:latest`
 
 That keeps the EIF build on the local Docker-daemon path and avoids Nitro CLI
 trying to resolve a temporary image name from a remote registry.
@@ -89,15 +89,15 @@ trying to resolve a temporary image name from a remote registry.
 Example for `x86_64` debug builds:
 
 ```bash
-cd enclaver
-cross build --target x86_64-unknown-linux-musl --features run_enclave,odyn
+cd capsule-cli
+cross build --target x86_64-unknown-linux-musl --features run_enclave,capsule-runtime
 
 tmpdir="$(mktemp -d)"
-cp target/x86_64-unknown-linux-musl/debug/odyn "$tmpdir/"
-docker buildx build -f ../dockerfiles/odyn-dev.dockerfile -t odyn-dev:latest "$tmpdir"
+cp target/x86_64-unknown-linux-musl/debug/capsule-runtime "$tmpdir/"
+docker buildx build -f ../dockerfiles/capsule-runtime-dev.dockerfile -t capsule-runtime-dev:latest "$tmpdir"
 
-cp target/x86_64-unknown-linux-musl/debug/enclaver-run "$tmpdir/"
-docker buildx build -f ../dockerfiles/sleeve-dev.dockerfile -t sleeve-dev:latest "$tmpdir"
+cp target/x86_64-unknown-linux-musl/debug/capsule-shell "$tmpdir/"
+docker buildx build -f ../dockerfiles/capsule-shell-dev.dockerfile -t capsule-shell-dev:latest "$tmpdir"
 
 rm -rf "$tmpdir"
 ```
@@ -111,33 +111,33 @@ The release Dockerfiles are designed around the layout used by `.github/workflow
 Expected artifact layout before building the currently published release images:
 
 ```text
-./amd64/odyn
-./amd64/enclaver-run
+./amd64/capsule-runtime
+./amd64/capsule-shell
 ```
 
 Local release-image build example:
 
 ```bash
 docker buildx build \
-  --file dockerfiles/odyn-release.dockerfile \
+  --file dockerfiles/capsule-runtime-release.dockerfile \
   --build-context artifacts=. \
   --platform linux/amd64 \
-  -t odyn:local .
+  -t capsule-runtime:local .
 
 docker buildx build \
-  --file dockerfiles/sleeve-release.dockerfile \
+  --file dockerfiles/capsule-shell-release.dockerfile \
   --build-context artifacts=. \
   --platform linux/amd64 \
-  -t sleeve:local .
+  -t capsule-shell:local .
 ```
 
 How those Dockerfiles work:
 
-- `odyn-release.dockerfile` copies `${TARGETARCH}/odyn` from the `artifacts` build context
-- `sleeve-release.dockerfile` copies `${TARGETARCH}/enclaver-run` from the `artifacts` build context
-- `sleeve-release.dockerfile` also copies `nitro-cli` and required runtime libraries from the default Nitro CLI image
-- `odyn-release.dockerfile` is currently published only for `linux/amd64`
-- `sleeve-release.dockerfile` is currently published only for `linux/amd64`
+- `capsule-runtime-release.dockerfile` copies `${TARGETARCH}/capsule-runtime` from the `artifacts` build context
+- `capsule-shell-release.dockerfile` copies `${TARGETARCH}/capsule-shell` from the `artifacts` build context
+- `capsule-shell-release.dockerfile` also copies `nitro-cli` and required runtime libraries from the default Nitro CLI image
+- `capsule-runtime-release.dockerfile` is currently published only for `linux/amd64`
+- `capsule-shell-release.dockerfile` is currently published only for `linux/amd64`
 
 ## Nitro CLI image
 
@@ -158,24 +158,24 @@ Or use the helper script:
 ./scripts/build-and-publish-nitro-cli.sh --tag latest
 ```
 
-The nitro-cli Dockerfile now rewrites the upstream kernel config in place to set `CONFIG_FUSE_FS=y` before rebuilding the official Nitro Enclaves blobs. The helper script then builds a local `linux/amd64` validation image, checks that the rebuilt enclave kernel exposes `CONFIG_FUSE_FS`, performs a smoke `nitro-cli build-enclave`, and only then pushes the `linux/amd64` image. Enclaver uses `public.ecr.aws/d4t4u8d2/sparsity-ai/nitro-cli:latest` by default.
-That self-hosted Nitro CLI image is what gives Enclaver EIFs the FUSE support required for host-backed directory mounts and the hostfs file proxy.
+The nitro-cli Dockerfile now rewrites the upstream kernel config in place to set `CONFIG_FUSE_FS=y` before rebuilding the official Nitro Enclaves blobs. The helper script then builds a local `linux/amd64` validation image, checks that the rebuilt enclave kernel exposes `CONFIG_FUSE_FS`, performs a smoke `nitro-cli build-enclave`, and only then pushes the `linux/amd64` image. Nova Enclave Capsule uses `public.ecr.aws/d4t4u8d2/sparsity-ai/nitro-cli:latest` by default.
+That self-hosted Nitro CLI image is what gives Nova Enclave Capsule EIFs the FUSE support required for host-backed directory mounts and the hostfs file proxy.
 
-To smoke-test the full `enclaver build` path itself, including the local Docker-context handoff to `nitro-cli build-enclave --docker-dir`, run:
+To smoke-test the full `capsule-cli build` path itself, including the local Docker-context handoff to `nitro-cli build-enclave --docker-dir`, run:
 
 ```bash
-cargo build --manifest-path enclaver/Cargo.toml --bin enclaver
-ENCLAVER_BIN=./enclaver/target/debug/enclaver ./scripts/enclaver-build-smoke-test.sh
+cargo build --manifest-path capsule-cli/Cargo.toml --bin capsule-cli
+CAPSULE_CLI_BIN=./capsule-cli/target/debug/capsule-cli ./scripts/capsule-build-smoke-test.sh
 ```
 
 For a deterministic Linux-only smoke path that avoids public-registry pulls by
 prebuilding local fixture images, run:
 
 ```bash
-cargo build --manifest-path enclaver/Cargo.toml --bin enclaver
-ENCLAVER_SMOKE_MODE=fixture \
-  ENCLAVER_BIN=./enclaver/target/debug/enclaver \
-  ./scripts/enclaver-build-smoke-test.sh
+cargo build --manifest-path capsule-cli/Cargo.toml --bin capsule-cli
+CAPSULE_CLI_SMOKE_MODE=fixture \
+  CAPSULE_CLI_BIN=./capsule-cli/target/debug/capsule-cli \
+  ./scripts/capsule-build-smoke-test.sh
 ```
 
 ## Troubleshooting
@@ -189,10 +189,10 @@ ENCLAVER_SMOKE_MODE=fixture \
 
 - `scripts/build-docker-images.sh`
 - `scripts/build-and-publish-nitro-cli.sh`
-- `scripts/enclaver-build-smoke-test.sh`
-- `dockerfiles/odyn-dev.dockerfile`
-- `dockerfiles/odyn-release.dockerfile`
-- `dockerfiles/sleeve-dev.dockerfile`
-- `dockerfiles/sleeve-release.dockerfile`
+- `scripts/capsule-build-smoke-test.sh`
+- `dockerfiles/capsule-runtime-dev.dockerfile`
+- `dockerfiles/capsule-runtime-release.dockerfile`
+- `dockerfiles/capsule-shell-dev.dockerfile`
+- `dockerfiles/capsule-shell-release.dockerfile`
 - `dockerfiles/nitro-cli.dockerfile`
 - `.github/workflows/release.yaml`

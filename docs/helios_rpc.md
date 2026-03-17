@@ -1,6 +1,6 @@
 # Helios RPC Integration
 
-Enclaver supports running one or more Helios light clients inside the enclave through `helios_rpc.chains`.
+Nova Enclave Capsule supports running one or more Helios light clients inside the enclave through `helios_rpc.chains`.
 Each configured chain exposes a local JSON-RPC endpoint on `127.0.0.1:<local_rpc_port>`.
 
 ## Why this matters
@@ -65,7 +65,7 @@ helios_rpc:
 | `consensus_rpc` | No | Custom consensus RPC endpoint. |
 | `checkpoint` | No | Weak subjectivity checkpoint (ethereum). |
 
-When `kind=ethereum` and `checkpoint` is omitted, odyn will try to derive a recent checkpoint from `consensus_rpc` at startup.  
+When `kind=ethereum` and `checkpoint` is omitted, capsule-runtime will try to derive a recent checkpoint from `consensus_rpc` at startup.  
 If derivation fails, it falls back to Helios external checkpoint discovery.
 
 ## Application usage
@@ -98,13 +98,13 @@ console.log(await ethProvider.getNetwork());
 
 ## Startup behavior
 
-- Odyn starts Helios in the background for each configured chain.
+- Capsule Runtime starts Helios in the background for each configured chain.
 - In the normal case, your app can start before Helios finishes initial sync.
 - Helios endpoints become fully ready only after initial sync.
 - If registry-backed KMS mode is enabled (`kms_app_id` + `nova_app_registry`),
   one chain must use `local_rpc_port: 18545` so Nova KMS registry discovery can
-  use the built-in local RPC endpoint, and Odyn waits for that auth-chain RPC to
-  become ready before it starts the Internal API and launches the app.
+  use the built-in local RPC endpoint, and Capsule Runtime waits for that auth-chain RPC to
+  become ready before it starts the Capsule API and launches the app.
 
 ## Egress requirements
 

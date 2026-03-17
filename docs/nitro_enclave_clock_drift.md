@@ -1,4 +1,4 @@
-# Clock Drift and Time Sync in Enclaver
+# Clock Drift and Time Sync in Nova Enclave Capsule
 
 ## Why this matters
 
@@ -10,25 +10,25 @@ That matters for time-sensitive behavior such as:
 - expiry windows
 - any protocol that compares wall-clock timestamps
 
-Enclaver includes host-assisted clock sync so applications do not need to build
+Nova Enclave Capsule includes host-assisted clock sync so applications do not need to build
 this plumbing themselves.
 
-## What Enclaver does today
+## What Nova Enclave Capsule does today
 
 When clock sync is effectively enabled:
 
-- `enclaver-run` starts a host-side VSOCK time server before launching the enclave
-- `odyn` performs an initial sync during startup
-- `odyn` keeps syncing periodically after startup
+- `capsule-shell` starts a host-side VSOCK time server before launching the enclave
+- `capsule-runtime` performs an initial sync during startup
+- `capsule-runtime` keeps syncing periodically after startup
 - the default interval is 300 seconds when `clock_sync` is omitted
 - the client estimates RTT and clock offset from host receive/transmit timestamps before calling `clock_settime(CLOCK_REALTIME, ...)`
 
 Relevant implementation files:
 
-- `enclaver/src/run.rs`
-- `enclaver/src/bin/odyn/clock_sync.rs`
-- `enclaver/src/runtime_vsock.rs`
-- `enclaver/src/manifest.rs`
+- `capsule-cli/src/run.rs`
+- `capsule-cli/src/bin/capsule-runtime/clock_sync.rs`
+- `capsule-cli/src/runtime_vsock.rs`
+- `capsule-cli/src/manifest.rs`
 
 ## Default behavior
 
@@ -57,9 +57,9 @@ clock_sync:
 
 The current implementation is intentionally resilient:
 
-- `odyn` retries the initial sync up to 10 times with a 2-second delay between attempts
+- `capsule-runtime` retries the initial sync up to 10 times with a 2-second delay between attempts
 - periodic sync failures are logged and retried on the next interval
-- on the host side, Enclaver first retries managed CID selection when the clock-sync VSOCK listener collides
+- on the host side, Nova Enclave Capsule first retries managed CID selection when the clock-sync VSOCK listener collides
 - if the host-side retry budget is exhausted and only clock sync is still conflicting, the enclave can still continue without a dedicated clock-sync listener
 
 ## What clock sync does not guarantee
@@ -78,7 +78,7 @@ Clock sync improves operational correctness, but it is not a trusted time root.
 
 ## Related documents
 
-- `docs/odyn.md`
-- `docs/odyn_details.md`
+- `docs/capsule-runtime.md`
+- `docs/capsule-runtime-details.md`
 - `docs/vsock_runtime.md`
-- `docs/enclaver.yaml`
+- `docs/capsule.yaml`

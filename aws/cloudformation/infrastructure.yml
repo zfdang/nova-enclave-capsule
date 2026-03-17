@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Enclaver - AWS Infrastructure for GitHub Actions CI/CD'
+Description: 'Nova Enclave Capsule - AWS Infrastructure for GitHub Actions CI/CD'
 
 Parameters:
   ProjectName:
     Type: String
-    Default: enclaver
+    Default: nova-enclave-capsule
     Description: Project name prefix for resources
 
   GitHubOrg:
@@ -14,7 +14,7 @@ Parameters:
 
   GitHubRepo:
     Type: String
-    Default: enclaver
+    Default: nova-enclave-capsule
     Description: GitHub repository name
 
   ECRPublicAlias:
@@ -101,13 +101,13 @@ Outputs:
     Description: ECR Public registry URL
     Value: !Sub 'public.ecr.aws/${ECRPublicAlias}'
 
-  OdynImageURI:
-    Description: Odyn container image URI
-    Value: !Sub 'public.ecr.aws/${ECRPublicAlias}/sparsity-ai/odyn'
+  CapsuleRuntimeImageURI:
+    Description: Capsule Runtime container image URI
+    Value: !Sub 'public.ecr.aws/${ECRPublicAlias}/sparsity-ai/capsule-runtime'
 
-  SleeveImageURI:
-    Description: Sleeve container image URI
-    Value: !Sub 'public.ecr.aws/${ECRPublicAlias}/sparsity-ai/sleeve'
+  CapsuleShellImageURI:
+    Description: Capsule Shell container image URI
+    Value: !Sub 'public.ecr.aws/${ECRPublicAlias}/sparsity-ai/capsule-shell'
 
   NitroCliImageURI:
     Description: Nitro CLI container image URI
@@ -118,7 +118,7 @@ Outputs:
     Value: |
       1. Deploy this stack in us-east-1 (required for ECR Public)
       2. Create ECR Public repositories manually in console:
-         - sparsity-ai/odyn
-         - sparsity-ai/sleeve
+         - sparsity-ai/capsule-runtime
+         - sparsity-ai/capsule-shell
          - sparsity-ai/nitro-cli
       3. Workflow will use GitHubActionsRoleArn via OIDC

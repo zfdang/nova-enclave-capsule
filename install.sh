@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Enclaver installer script
-# Usage: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/sparsity-xyz/enclaver/refs/heads/sparsity/install.sh)"
+# Nova Enclave Capsule installer script
+# Usage: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/sparsity-xyz/nova-enclave-capsule/refs/heads/sparsity/install.sh)"
 
 set -e
 
@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO="sparsity-xyz/enclaver"
+REPO="sparsity-xyz/nova-enclave-capsule"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 GITHUB_API="https://api.github.com/repos/${REPO}/releases/latest"
 GITHUB_RELEASES="https://github.com/${REPO}/releases/download"
@@ -94,16 +94,16 @@ get_latest_version() {
 download_release() {
     local version="$1"
     local platform="$2"
-    local archive_name="enclaver-${platform}-${version}.tar.gz"
+    local archive_name="capsule-cli-${platform}-${version}.tar.gz"
     local download_url="${GITHUB_RELEASES}/${version}/${archive_name}"
 
-    # https://github.com/sparsity-xyz/enclaver/releases/download/v1.0.1/enclaver-linux-x86_64-v1.0.1.tar.gz
+    # https://github.com/sparsity-xyz/nova-enclave-capsule/releases/download/v1.0.1/capsule-cli-linux-x86_64-v1.0.1.tar.gz
     local temp_dir
     
     temp_dir=$(mktemp -d)
     trap 'rm -rf "$temp_dir"' EXIT
 
-    log_info "Downloading enclaver ${version} for ${platform} from ${download_url}..."
+    log_info "Downloading capsule-cli ${version} for ${platform} from ${download_url}..."
     
     if command -v curl > /dev/null 2>&1; then
         if ! curl -fsSL -o "${temp_dir}/${archive_name}" "${download_url}"; then
@@ -119,14 +119,14 @@ download_release() {
 
     tar -xzf "${temp_dir}/${archive_name}" -C "${temp_dir}"
 
-    echo "${temp_dir}/enclaver-${platform}-${version}"
+    echo "${temp_dir}/capsule-cli-${platform}-${version}"
 }
 
 # Install binary
 install_binary() {
     local temp_dir="$1"
-    local binary_name="enclaver"
-    log_info "Installing enclaver from ${temp_dir}"
+    local binary_name="capsule-cli"
+    log_info "Installing capsule-cli from ${temp_dir}"
 
     # Check if we need sudo for installation
     if [ ! -w "$INSTALL_DIR" ]; then
@@ -145,16 +145,16 @@ install_binary() {
     fi
     
     # Verify installation
-    if command -v enclaver > /dev/null 2>&1; then
-        enclaver --version
+    if command -v capsule-cli > /dev/null 2>&1; then
+        capsule-cli --version
     else
-        log_warn "enclaver is not in PATH. Add ${INSTALL_DIR} to your PATH"
+        log_warn "capsule-cli is not in PATH. Add ${INSTALL_DIR} to your PATH"
     fi
 }
 
 # Main installation flow
 main() {
-    log_info "Enclaver Installer"
+    log_info "Nova Enclave Capsule Installer"
     
     # Check for required tools
     if ! command -v tar > /dev/null 2>&1; then
@@ -180,7 +180,7 @@ main() {
     log_info "Installing binary..."
     install_binary "$temp_dir"
     
-    log_info "Installation complete! Run 'enclaver --help' to get started"
+    log_info "Installation complete! Run 'capsule-cli --help' to get started"
     log_info "Documentation: https://github.com/${REPO}"
 }
 

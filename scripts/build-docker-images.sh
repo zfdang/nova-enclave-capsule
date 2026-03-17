@@ -1,7 +1,7 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
 # build-docker-images.sh - developer helper to build dev Docker images with
-#                          enclave binaries (odyn, enclaver-run)
+#                          enclave binaries (capsule-runtime, capsule-shell)
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
@@ -30,7 +30,7 @@ BUILD_MODE="${BUILD_MODE:-debug}"
 show_help() {
     echo "Usage: $0 [--release|--debug] [--help]"
     echo ""
-    echo "Build development Docker images with enclave binaries (odyn, enclaver-run)."
+    echo "Build development Docker images with enclave binaries (capsule-runtime, capsule-shell)."
     echo ""
     echo "Options:"
     echo "  --release    Build optimized release binaries"
@@ -67,10 +67,11 @@ local_arch=$(uname -m)
 case $local_arch in
     x86_64)
         rust_target="x86_64-unknown-linux-musl"
+        docker_target_arch="amd64"
         ;;
     aarch64)
         log_error "scripts/build-docker-images.sh currently requires an x86_64 host."
-        echo "The default sleeve Dockerfiles copy nitro-cli from our self-hosted nitro-cli image,"
+        echo "The default capsule-shell Dockerfiles copy nitro-cli from our self-hosted nitro-cli image,"
         echo "and that image is currently published only for linux/amd64."
         exit 1
         ;;
@@ -80,22 +81,22 @@ case $local_arch in
         ;;
 esac
 
-enclaver_dir="$(dirname "$(dirname "${BASH_SOURCE[0]}")")/enclaver"
+capsule_cli_dir="$(dirname "$(dirname "${BASH_SOURCE[0]}")")/capsule-cli"
 
 # Default tags (debug)
-odyn_tag="odyn-dev:latest"
-sleeve_tag="sleeve-dev:latest"
-odyn_dockerfile="odyn-dev.dockerfile"
-sleeve_dockerfile="sleeve-dev.dockerfile"
+capsule_runtime_tag="capsule-runtime-dev:latest"
+capsule_shell_tag="capsule-shell-dev:latest"
+capsule_runtime_dockerfile="capsule-runtime-dev.dockerfile"
+capsule_shell_dockerfile="capsule-shell-dev.dockerfile"
 
 # Set build mode-specific variables
 if [ "$BUILD_MODE" = "release" ]; then
     rust_target_dir="./target/${rust_target}/release"
     CROSS_BUILD_FLAGS="--release"
-    odyn_tag="odyn:latest"
-    sleeve_tag="sleeve:latest"
-    odyn_dockerfile="odyn-release.dockerfile"
-    sleeve_dockerfile="sleeve-release.dockerfile"
+    capsule_runtime_tag="capsule-runtime:latest"
+    capsule_shell_tag="capsule-shell:latest"
+    capsule_runtime_dockerfile="capsule-runtime-release.dockerfile"
+    capsule_shell_dockerfile="capsule-shell-release.dockerfile"
     log_info "Build mode: RELEASE (optimized)"
 else
     rust_target_dir="./target/${rust_target}/debug"
@@ -103,7 +104,7 @@ else
     log_info "Build mode: DEBUG (unoptimized)"
 fi
 
-cd "$enclaver_dir"
+cd "$capsule_cli_dir"
 
 docker_build_dir=$(mktemp -d)
 trap "rm --force --recursive ${docker_build_dir}" EXIT
@@ -116,26 +117,30 @@ if ! command -v cross >/dev/null 2>&1; then
 fi
 
 log_info "Building Rust artifacts with 'cross' for target: $rust_target"
-cross build --target "$rust_target" ${CROSS_BUILD_FLAGS} --features run_enclave,odyn
+cross build --target "$rust_target" ${CROSS_BUILD_FLAGS} --features run_enclave,capsule_runtime
 
 log_info "Copying built artifacts from: ${rust_target_dir}"
-cp "$rust_target_dir/odyn" "$docker_build_dir/"
-cp "$rust_target_dir/enclaver-run" "$docker_build_dir/"
+artifacts_arch_dir="${docker_build_dir}/${docker_target_arch}"
+mkdir -p "${artifacts_arch_dir}"
+cp "$rust_target_dir/capsule-runtime" "${artifacts_arch_dir}/"
+cp "$rust_target_dir/capsule-shell" "${artifacts_arch_dir}/"
 
-log_info "Building images using Dockerfiles: ${odyn_dockerfile}, ${sleeve_dockerfile}"
-docker buildx build \
-    -f ../dockerfiles/${odyn_dockerfile} \
-    -t "${odyn_tag}" \
+log_info "Building images using Dockerfiles: ${capsule_runtime_dockerfile}, ${capsule_shell_dockerfile}"
+DOCKER_BUILDKIT=1 docker build \
+    --build-context artifacts="${docker_build_dir}" \
+    -f ../dockerfiles/${capsule_runtime_dockerfile} \
+    -t "${capsule_runtime_tag}" \
     "${docker_build_dir}"
 
-docker buildx build \
-    -f ../dockerfiles/${sleeve_dockerfile} \
-    -t "${sleeve_tag}" \
+DOCKER_BUILDKIT=1 docker build \
+    --build-context artifacts="${docker_build_dir}" \
+    -f ../dockerfiles/${capsule_shell_dockerfile} \
+    -t "${capsule_shell_tag}" \
     "${docker_build_dir}"
 
 log_info "Build complete!"
-log_info "To use dev images, merge the following into enclaver.yaml:"
+log_info "To use dev images, merge the following into capsule.yaml:"
 echo ""
 echo "sources:"
-echo "   odyn: \"${odyn_tag}\""
-echo "   sleeve: \"${sleeve_tag}\""
+echo "   capsule-runtime: \"${capsule_runtime_tag}\""
+echo "   capsule-shell: \"${capsule_shell_tag}\""

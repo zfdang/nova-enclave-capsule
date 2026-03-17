@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # publish-docker-images.sh
 #
-# Authenticate and publish odyn and sleeve images to AWS Public ECR.
+# Authenticate and publish capsule-runtime and capsule-shell images to AWS Public ECR.
 #
 # High-level goal:
 #   1. Authenticate Docker to Public ECR
@@ -37,10 +37,10 @@ aws ecr-public get-login-password --region "$DEFAULT_REGION" | \
     docker login --username AWS --password-stdin public.ecr.aws
 
 # 2. Push each image
-for REPO in odyn sleeve; do
+for REPO in capsule-runtime capsule-shell; do
     log_info "Processing repository: $REPO"
 
-    # Define the repository name (sparsity-ai/odyn, etc.)
+    # Define the repository name (sparsity-ai/capsule-runtime, etc.)
     ECR_REPO_NAME="${REPO_PREFIX}/${REPO}"
 
     # Ensure repository exists

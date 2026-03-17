@@ -3,8 +3,8 @@
 ## Scope and assumptions
 
 - applications run inside an enclave
-- Enclaver's built-in outbound path is an HTTP(S) proxy, not arbitrary raw TCP egress
-- when `egress.allow` is non-empty, Odyn sets:
+- Nova Enclave Capsule's built-in outbound path is an HTTP(S) proxy, not arbitrary raw TCP egress
+- when `egress.allow` is non-empty, Capsule Runtime sets:
   - `http_proxy`
   - `https_proxy`
   - `HTTP_PROXY`
@@ -13,7 +13,7 @@
   - `NO_PROXY`
 - `no_proxy` and `NO_PROXY` are currently `localhost,127.0.0.1`
 
-This document intentionally focuses on Enclaver's runtime contract, not on an
+This document intentionally focuses on Nova Enclave Capsule's runtime contract, not on an
 exhaustive survey of every third-party HTTP library.
 
 ## Runtime contract
@@ -55,14 +55,14 @@ automatically pick up proxy environment variables.
 - the client ignores proxy configuration
 - custom transport or agent code accidentally removes proxy behavior
 - localhost traffic is incorrectly sent through the proxy
-- the application assumes arbitrary outbound TCP, but Enclaver only provides documented HTTP/HTTPS proxy egress
+- the application assumes arbitrary outbound TCP, but Nova Enclave Capsule only provides documented HTTP/HTTPS proxy egress
 
 ## Final guidance
 
 Use an outbound HTTP client stack only when you have verified one of these two
 behaviors:
 
-- it correctly honors the proxy environment variables that Odyn sets
+- it correctly honors the proxy environment variables that Capsule Runtime sets
 - your application configures the proxy explicitly
 
-Anything else is outside Enclaver's documented outbound contract.
+Anything else is outside Nova Enclave Capsule's documented outbound contract.

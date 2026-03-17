@@ -1,17 +1,17 @@
-# Enclaver VSOCK Runtime Model
+# Nova Enclave Capsule VSOCK Runtime Model
 
-This document describes how Enclaver uses VSOCK today, including how multiple
-`enclaver run` processes can coexist on the same EC2 instance.
+This document describes how Nova Enclave Capsule uses VSOCK today, including how multiple
+`capsule-cli run` processes can coexist on the same EC2 instance.
 
 Scope:
 - host/container/enclave VSOCK handling at runtime
 - managed enclave CID allocation
 - host-side runtime VSOCK port derivation
-- retry and cleanup behavior when multiple Enclaver instances run concurrently
+- retry and cleanup behavior when multiple Nova Enclave Capsule instances run concurrently
 
 ## Overview
 
-Enclaver uses two kinds of VSOCK ports:
+Nova Enclave Capsule uses two kinds of VSOCK ports:
 
 1. Fixed enclave-local VSOCK ports
    - These are stable inside every enclave instance.
@@ -45,7 +45,7 @@ as their CIDs differ.
 
 ## Host-side Runtime VSOCK Port Block
 
-Enclaver derives host-side runtime VSOCK listeners from the managed enclave CID
+Nova Enclave Capsule derives host-side runtime VSOCK listeners from the managed enclave CID
 using this formula:
 
 - block base: `20000 + (CID * 128)`
@@ -65,14 +65,14 @@ Example:
   - clock sync: `22177`
   - first hostfs mount: `22192`
 
-This is implemented in `enclaver/src/runtime_vsock.rs` via
+This is implemented in `capsule-cli/src/runtime_vsock.rs` via
 `RuntimeHostVsockPorts`.
 
 ## Managed Enclave CID Range
 
-Enclaver does not let each run pick an arbitrary CID from the manifest.
+Nova Enclave Capsule does not let each run pick an arbitrary CID from the manifest.
 
-Instead, `enclaver-run` allocates a managed CID from the configured range:
+Instead, `capsule-shell` allocates a managed CID from the configured range:
 
 - start: `16`
 - end: `4096`
@@ -89,7 +89,7 @@ This is simple and deterministic:
 
 ## Startup Sequence
 
-At a high level, `enclaver run` / `enclaver-run` does this:
+At a high level, `capsule-cli run` / `capsule-shell` does this:
 
 1. Load the packaged manifest.
 2. Query existing enclaves with `nitro-cli describe-enclaves`.
@@ -106,12 +106,12 @@ At a high level, `enclaver run` / `enclaver-run` does this:
 The key point is step 5:
 
 - host-side runtime VSOCK listeners are bound before the enclave starts
-- this guarantees that Odyn can immediately dial the host-side services once it
+- this guarantees that Capsule Runtime can immediately dial the host-side services once it
   boots
 
-## How Odyn Finds the Host-side Runtime Ports
+## How Capsule Runtime Finds the Host-side Runtime Ports
 
-Odyn does not receive the runtime port block over a separate control channel.
+Capsule Runtime does not receive the runtime port block over a separate control channel.
 
 Instead, inside the enclave it:
 
@@ -125,9 +125,9 @@ Instead, inside the enclave it:
 This is why host and enclave stay aligned without needing a `vsock_ports`
 runtime config surface.
 
-## Multiple `enclaver run` Processes on One EC2
+## Multiple `capsule-cli run` Processes on One EC2
 
-When two or more Enclaver instances start on the same EC2 instance, they may
+When two or more Nova Enclave Capsule instances start on the same EC2 instance, they may
 race in two places:
 
 1. CID allocation race
@@ -138,7 +138,7 @@ race in two places:
 Two processes can both observe the same CID as "free" from
 `nitro-cli describe-enclaves` and choose it.
 
-Enclaver handles this by:
+Nova Enclave Capsule handles this by:
 
 - launching the enclave with an explicit managed CID
 - checking Nitro CLI failures for CID-conflict stderr
@@ -151,7 +151,7 @@ There is an outer retry budget for this path.
 Two processes can derive the same runtime block and attempt to bind the same
 host-side VSOCK listeners.
 
-Enclaver handles this by:
+Nova Enclave Capsule handles this by:
 
 - treating `AddrInUse` while binding host-side runtime services as a CID-level
   collision
@@ -162,7 +162,7 @@ There is an inner retry budget for this path.
 
 As a result:
 
-- multiple Enclaver instances can coexist on the same EC2 instance
+- multiple Nova Enclave Capsule instances can coexist on the same EC2 instance
 - each successful instance ends up with a distinct CID
 - each successful instance gets a distinct host-side runtime VSOCK block
 
@@ -172,15 +172,15 @@ Clock sync is treated as non-critical compared with enclave startup itself.
 
 Current behavior:
 
-- Enclaver first retries managed CID selection when clock sync bind hits
+- Nova Enclave Capsule first retries managed CID selection when clock sync bind hits
   `AddrInUse`, just like the other host-side runtime listeners.
 - If the runtime bind retry budget is exhausted and only clock sync is still in
-  conflict, Enclaver degrades gracefully and starts without a dedicated clock
+  conflict, Nova Enclave Capsule degrades gracefully and starts without a dedicated clock
   sync listener.
 
 This means:
 
-- Enclaver prefers a clean per-CID clock sync listener when possible
+- Nova Enclave Capsule prefers a clean per-CID clock sync listener when possible
 - but clock sync does not block the entire enclave forever once retry budget is
   exhausted
 
@@ -198,7 +198,7 @@ That order defines the hostfs offset inside the per-CID VSOCK block:
 Both sides must walk the mounts in the same order:
 
 - host side starts one hostfs proxy per mount in manifest order
-- Odyn derives the same port from local CID and manifest order
+- Capsule Runtime derives the same port from local CID and manifest order
 
 This is why mount order is part of the runtime contract.
 
@@ -206,17 +206,17 @@ This is why mount order is part of the runtime contract.
 
 VSOCK is only one layer of the runtime.
 
-Even though multiple Enclaver instances can now coexist on one EC2 instance,
+Even though multiple Nova Enclave Capsule instances can now coexist on one EC2 instance,
 the following still need unique host-level assignments:
 
-- Docker-published TCP ports from `enclaver run -p host:container`
+- Docker-published TCP ports from `capsule-cli run -p host:container`
 - any other host TCP/UDP listeners you bind outside the enclave runtime
 
 VSOCK collision handling does not make Docker `-p` conflicts go away.
 
 ## Cleanup Behavior
 
-When Enclaver cleans up a running enclave, it now tries to be best-effort:
+When Nova Enclave Capsule cleans up a running enclave, it now tries to be best-effort:
 
 - always stop local background tasks
 - always stop the debug console process
@@ -232,14 +232,14 @@ returning success.
 - `vsock_ports` is no longer a supported manifest field.
 - Host and enclave both derive runtime VSOCK ports from CID instead of reading
   a user-provided runtime port map.
-- Running multiple Enclaver instances on the same EC2 instance is supported for
+- Running multiple Nova Enclave Capsule instances on the same EC2 instance is supported for
   VSOCK runtime services.
 - Docker `-p` host port conflicts are still the operator's responsibility.
 
 ## Related Documents
 
 - `docs/port_handling.md`
-- `docs/odyn.md`
-- `docs/odyn_details.md`
+- `docs/capsule-runtime.md`
+- `docs/capsule-runtime-details.md`
 - `docs/architecture.md`
-- `docs/enclaver-architecture.md`
+- `docs/capsule-architecture.md`

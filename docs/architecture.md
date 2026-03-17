@@ -1,40 +1,40 @@
-# Enclaver Architecture
+# Nova Enclave Capsule Architecture
 
-This is the high-level architecture view. For code-level module mapping, see `docs/enclaver-architecture.md`.
+This is the high-level architecture view. For code-level module mapping, see `docs/capsule-architecture.md`.
 
 ## Build-time flow
 
-`enclaver build` currently does five things:
+`capsule-cli build` currently does five things:
 
-1. loads `enclaver.yaml`
+1. loads `capsule.yaml`
 2. amends the source app image by adding:
-   - `/sbin/odyn`
-   - `/etc/enclaver/enclaver.yaml`
-3. tags that amended image locally as a temporary `enclaver-intermediate-<uuid>:latest`
+   - `/sbin/capsule-runtime`
+   - `/etc/capsule/capsule.yaml`
+3. tags that amended image locally as a temporary `capsule-intermediate-<uuid>:latest`
 4. writes a tiny temporary Docker context whose `Dockerfile` is `FROM <that-local-tag>`, then runs `nitro-cli build-enclave --docker-dir ...` in a Nitro CLI container to produce `application.eif`
-5. appends `application.eif` and `enclaver.yaml` to the Sleeve base image
+5. appends `application.eif` and `capsule.yaml` to the Capsule Shell base image
 
 Result:
 
 ```text
 release image
-|- /usr/local/bin/enclaver-run
+|- /usr/local/bin/capsule-shell
 |- /bin/nitro-cli
 |- /enclave/application.eif
-`- /enclave/enclaver.yaml
+`- /enclave/capsule.yaml
 ```
 
 That means the manifest is copied twice during build:
 
-- `/enclave/enclaver.yaml` for `enclaver-run` on the host/container side
-- `/etc/enclaver/enclaver.yaml` inside the EIF for `odyn`
+- `/enclave/capsule.yaml` for `capsule-shell` on the host/container side
+- `/etc/capsule/capsule.yaml` inside the EIF for `capsule-runtime`
 
 ## Runtime flow
 
 Host/container side:
 
-1. `enclaver run` starts the Sleeve image as a privileged Docker container and mounts `/dev/nitro_enclaves`
-2. `enclaver-run` loads `/enclave/enclaver.yaml` for host-side runtime configuration
+1. `capsule-cli run` starts the Capsule Shell image as a privileged Docker container and mounts `/dev/nitro_enclaves`
+2. `capsule-shell` loads `/enclave/capsule.yaml` for host-side runtime configuration
 3. it starts the host-side egress proxy only when `egress.allow` effectively enables proxying
 4. it starts host-side hostfs proxies for each bound `storage.mounts[]` entry
 5. it starts the host-side clock-sync time server when clock sync is effectively enabled
@@ -43,14 +43,14 @@ Host/container side:
 
 Enclave side:
 
-1. `/sbin/odyn` starts as PID 1
+1. `/sbin/capsule-runtime` starts as PID 1
 2. it brings up loopback and seeds RNG from NSM
 3. it mounts any configured host-backed directories before the app starts
 4. it starts the enclave-side egress proxy if enabled
 5. it starts the clock-sync client service; clock sync is default-on unless explicitly disabled
 6. it starts Helios in the background when configured
 7. if registry-backed KMS is enabled, it waits for the Helios auth-chain RPC on port `18545`
-8. it starts the Internal API and Aux API
+8. it starts the Capsule API and Aux API
 9. it starts ingress listeners
 10. it launches the user application
 
@@ -59,20 +59,20 @@ Enclave side:
 | Component | Inside EIF | Outside EIF |
 |-----------|:----------:|:-----------:|
 | User application | yes | no |
-| Odyn supervisor | yes | no |
-| Embedded `/etc/enclaver/enclaver.yaml` | yes | no |
-| `enclaver-run` | no | yes |
+| Capsule Runtime supervisor | yes | no |
+| Embedded `/etc/capsule/capsule.yaml` | yes | no |
+| `capsule-shell` | no | yes |
 | `nitro-cli` | no | yes |
 | `/enclave/application.eif` | no | yes |
-| `/enclave/enclaver.yaml` | no | yes |
+| `/enclave/capsule.yaml` | no | yes |
 | Host ingress proxy | no | yes |
 | Host egress proxy | no | yes |
 | Host hostfs proxy | no | yes |
 | Host clock-sync time server | no | yes |
 
-## Odyn service model
+## Capsule Runtime service model
 
-Inside the enclave, Odyn runs two kinds of things:
+Inside the enclave, Capsule Runtime runs two kinds of things:
 
 Standalone runtime services:
 
@@ -83,7 +83,7 @@ Standalone runtime services:
 - console/log streaming
 - optional Helios RPC
 
-Internal API capabilities exposed on `/v1/*`:
+Capsule API capabilities exposed on `/v1/*`:
 
 - attestation
 - Ethereum signing
@@ -93,7 +93,7 @@ Internal API capabilities exposed on `/v1/*`:
 - optional Nova KMS
 - optional app-wallet routes
 
-`kms_integration`, `storage`, and encryption are not separate peer daemons. They are capabilities behind the Internal API.
+`kms_integration`, `storage`, and encryption are not separate peer daemons. They are capabilities behind the Capsule API.
 
 ## Traffic paths
 
@@ -102,9 +102,9 @@ Ingress:
 ```text
 host client
 -> docker published port
--> Sleeve host proxy
+-> Capsule Shell host proxy
 -> vsock
--> Odyn enclave proxy
+-> Capsule Runtime enclave proxy
 -> 127.0.0.1:<listen_port> inside enclave
 ```
 
@@ -121,9 +121,9 @@ application
 Clock sync:
 
 ```text
-Odyn clock-sync client
+Capsule Runtime clock-sync client
 -> host-side vsock port derived from the enclave CID
--> host time server in enclaver-run
+-> host time server in capsule-shell
 ```
 
 Host-backed directory mount:
@@ -132,9 +132,9 @@ Host-backed directory mount:
 application file API
 -> FUSE mount inside enclave
 -> host-side vsock port derived from the enclave CID and mount index
--> hostfs proxy in enclaver-run
--> transient host mount at <host_state_dir>/.enclaver-hostfs/mnt-<uuid>/data
-   backed by <host_state_dir>/.enclaver-hostfs/disk.img
+-> hostfs proxy in capsule-shell
+-> transient host mount at <host_state_dir>/.capsule-hostfs/mnt-<uuid>/data
+   backed by <host_state_dir>/.capsule-hostfs/disk.img
 ```
 
 ## Important VSOCK ports
@@ -151,8 +151,8 @@ Ingress uses the configured `ingress[].listen_port` values rather than a single 
 
 ## Related documents
 
-- `docs/odyn.md`
+- `docs/capsule-runtime.md`
 - `docs/port_handling.md`
-- `docs/internal_api.md`
+- `docs/capsule-api.md`
 - `docs/helios_rpc.md`
 - `docs/nitro_enclave_clock_drift.md`

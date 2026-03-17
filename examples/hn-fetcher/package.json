@@ -1,9 +1,9 @@
 {
   "name": "hn-fetcher",
   "version": "1.0.0",
-  "description": "Minimal Enclaver HN fetcher example",
+  "description": "Minimal Nova Enclave Capsule HN fetcher example",
   "main": "app.js",
-  "repository": "https://github.com/sparsity-xyz/enclaver",
+  "repository": "https://github.com/sparsity-xyz/nova-enclave-capsule",
   "author": "sparsity-xyz",
   "license": "Apache 2",
   "private": false,

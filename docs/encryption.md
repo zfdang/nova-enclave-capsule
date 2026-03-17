@@ -1,12 +1,12 @@
-# Enclaver Encryption Guide
+# Nova Enclave Capsule Encryption Guide
 
-This document describes the transport-encryption primitives that `odyn` exposes today.
+This document describes the transport-encryption primitives that `capsule-runtime` exposes today.
 
 It is intentionally scoped to repository behavior. It does not describe an external platform reverse proxy or application-specific request format.
 
-## What Enclaver provides
+## What Nova Enclave Capsule provides
 
-`odyn` exposes these building blocks:
+`capsule-runtime` exposes these building blocks:
 
 - `POST /v1/attestation`
 - `GET /v1/encryption/public_key`
@@ -18,7 +18,7 @@ Your application decides:
 
 - how clients send encrypted application payloads
 - which ingress or HTTP endpoint receives them
-- when to call the Internal API to decrypt or encrypt data
+- when to call the Capsule API to decrypt or encrypt data
 
 ## Why this exists
 
@@ -26,13 +26,13 @@ Ingress traffic reaches the enclave through host-side proxies. That path is not 
 
 ## Cryptographic protocol
 
-`odyn` uses:
+`capsule-runtime` uses:
 
 | Component | Value |
 |-----------|-------|
 | Key agreement | P-384 ECDH |
 | KDF | HKDF-SHA256 |
-| HKDF info | `enclaver-ecdh-aes256gcm-v1` |
+| HKDF info | `capsule-cli-ecdh-aes256gcm-v1` |
 | Symmetric cipher | AES-256-GCM |
 | Normal nonce length | 12 bytes |
 
@@ -41,7 +41,7 @@ The shared AES key is derived from:
 ```text
 shared_secret = ECDH(client_private, enclave_public)
 salt = sort_lexicographically(client_pub_sec1, enclave_pub_sec1) || nonce
-aes_key = HKDF-SHA256(shared_secret, salt, "enclaver-ecdh-aes256gcm-v1")
+aes_key = HKDF-SHA256(shared_secret, salt, "capsule-cli-ecdh-aes256gcm-v1")
 ```
 
 Important interoperability details:
@@ -49,7 +49,7 @@ Important interoperability details:
 - the API exchanges public keys in DER/SPKI form
 - internally, HKDF salt construction uses the uncompressed SEC1 form of both public keys
 - public keys are sorted lexicographically as raw bytes before concatenation
-- `odyn` rejects nonce reuse for the same client public key on decrypt
+- `capsule-runtime` rejects nonce reuse for the same client public key on decrypt
 
 ## Endpoint behavior
 
@@ -123,7 +123,7 @@ Important detail:
 
 `POST /v1/attestation` can carry the encryption key in the attestation document.
 
-If the request omits `public_key`, `odyn` uses the enclave P-384 encryption public key by default.
+If the request omits `public_key`, `capsule-runtime` uses the enclave P-384 encryption public key by default.
 
 Request:
 
@@ -144,7 +144,7 @@ Response:
 `user_data` handling:
 
 - must be a JSON object when present
-- `odyn` always injects `eth_addr`
+- `capsule-runtime` always injects `eth_addr`
 - if app-wallet material is available, it may also inject `app_wallet`
 
 ## Typical client flow
@@ -159,7 +159,7 @@ Response:
    - derive a fresh AES key with HKDF using `sorted_pubkeys || nonce`
    - encrypt with AES-256-GCM
 7. Send the ciphertext, nonce, and client DER public key to your application endpoint.
-8. Inside the enclave, your application calls `odyn` decrypt/encrypt endpoints as needed.
+8. Inside the enclave, your application calls `capsule-runtime` decrypt/encrypt endpoints as needed.
 
 ## Response signing
 
@@ -190,6 +190,6 @@ Inside the enclave:
 
 ## Related documents
 
-- `docs/internal_api.md`
-- `docs/odyn.md`
+- `docs/capsule-api.md`
+- `docs/capsule-runtime.md`
 - `docs/nitro_enclave_clock_drift.md`

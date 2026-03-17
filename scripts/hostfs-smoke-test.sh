@@ -5,10 +5,10 @@ set -euo pipefail
 TMP_DIR="$(mktemp -d)"
 STATE_DIR="${TMP_DIR}/state"
 APP_DIR="${TMP_DIR}/app"
-MANIFEST_PATH="${TMP_DIR}/enclaver.yaml"
+MANIFEST_PATH="${TMP_DIR}/capsule.yaml"
 APP_IMAGE_TAG="hostfs-smoke-app:latest"
 RELEASE_IMAGE_TAG="hostfs-smoke-enclave:latest"
-ENCLAVER_BIN="${ENCLAVER_BIN:-enclaver}"
+CAPSULE_CLI_BIN="${CAPSULE_CLI_BIN:-capsule-cli}"
 RUNNER="${RUNNER:-sudo}"
 
 cleanup() {
@@ -52,16 +52,16 @@ EOF
 echo "[1/4] building app image ${APP_IMAGE_TAG}"
 docker build -t "${APP_IMAGE_TAG}" "${APP_DIR}"
 
-echo "[2/4] building enclaver release image ${RELEASE_IMAGE_TAG}"
-"${ENCLAVER_BIN}" build -f "${MANIFEST_PATH}" >/dev/null
+echo "[2/4] building capsule-cli release image ${RELEASE_IMAGE_TAG}"
+"${CAPSULE_CLI_BIN}" build -f "${MANIFEST_PATH}" >/dev/null
 
 echo "[3/4] first enclave run: expect file creation"
-first_output="$(${RUNNER} "${ENCLAVER_BIN}" run -f "${MANIFEST_PATH}" --mount appdata="${STATE_DIR}" 2>&1)"
+first_output="$(${RUNNER} "${CAPSULE_CLI_BIN}" run -f "${MANIFEST_PATH}" --mount appdata="${STATE_DIR}" 2>&1)"
 echo "${first_output}"
 grep -q "wrote:/mnt/appdata/probe.txt" <<<"${first_output}"
 
 echo "[4/4] second enclave run: expect persisted file verification"
-second_output="$(${RUNNER} "${ENCLAVER_BIN}" run -f "${MANIFEST_PATH}" --mount appdata="${STATE_DIR}" 2>&1)"
+second_output="$(${RUNNER} "${CAPSULE_CLI_BIN}" run -f "${MANIFEST_PATH}" --mount appdata="${STATE_DIR}" 2>&1)"
 echo "${second_output}"
 grep -q "verified:enclave-persist-ok" <<<"${second_output}"
 

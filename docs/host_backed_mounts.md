@@ -4,14 +4,14 @@ This guide explains how to give an enclave application a normal writable
 directory such as `/mnt/appdata`, while storing the actual bytes on the parent
 instance.
 
-In Enclaver, the feature is configured with a manifest-declared
+In Nova Enclave Capsule, the feature is configured with a manifest-declared
 `storage.mounts[]` entry plus a runtime `--mount <name>=<host_state_dir>`
 binding, exposed through the hostfs file proxy. If you discard the bound host
 state directory between runs, the same mechanism behaves like a host-backed
 temporary directory.
 
 Whether the mount behaves as "temporary" or "persistent" depends on the
-lifecycle of the bound `host_state_dir`. Reuse the same directory and Enclaver
+lifecycle of the bound `host_state_dir`. Reuse the same directory and Nova Enclave Capsule
 reuses the same backing image. Discard that directory and the next run starts
 from an empty filesystem.
 
@@ -35,20 +35,20 @@ storage:
       size_mb: 10240
 ```
 
-`mount_path` must live under `/mnt/...` inside the enclave. Enclaver treats
+`mount_path` must live under `/mnt/...` inside the enclave. Nova Enclave Capsule treats
 host-backed mounts as application data mounts, not arbitrary filesystem
 overlays.
 
 Runtime binding:
 
 ```bash
-enclaver run -f enclaver.yaml --mount appdata=/var/lib/my-service/appdata
+capsule-cli run -f capsule.yaml --mount appdata=/var/lib/my-service/appdata
 ```
 
 Result:
 
 - inside the enclave, your application reads and writes `/mnt/appdata`
-- on the host, Enclaver creates or reuses a loopback-backed filesystem under
+- on the host, Nova Enclave Capsule creates or reuses a loopback-backed filesystem under
   `/var/lib/my-service/appdata`
 - restarting the enclave with the same `--mount` path keeps the data
 
@@ -56,11 +56,11 @@ Result:
 
 `<host_state_dir>` is the host path you pass to `--mount`.
 
-Enclaver stores its runtime metadata under a hidden directory:
+Nova Enclave Capsule stores its runtime metadata under a hidden directory:
 
 ```text
 <host_state_dir>/
-`- .enclaver-hostfs/
+`- .capsule-hostfs/
    |- disk.img
    |- lock
    `- mnt-<uuid>/
@@ -76,7 +76,7 @@ For example, if you bind:
 then the backing image lives at:
 
 ```text
-/var/lib/my-service/appdata/.enclaver-hostfs/disk.img
+/var/lib/my-service/appdata/.capsule-hostfs/disk.img
 ```
 
 What these files are:
@@ -85,7 +85,7 @@ What these files are:
 - `lock`: prevents the same host state directory from being mounted twice at once
 - `mnt-<uuid>/data`: the transient host mountpoint used for the current runtime
 
-The extra `.enclaver-hostfs/` layer is intentional. It keeps Enclaver metadata
+The extra `.capsule-hostfs/` layer is intentional. It keeps Nova Enclave Capsule metadata
 separate from the application's host state directory.
 
 `disk.img` is a sparse file. `ls -lh` shows the logical size, while actual disk
@@ -94,20 +94,20 @@ usage grows as data is written.
 ## How Persistence Works
 
 - reusing the same `host_state_dir` preserves files across runs
-- deleting `<host_state_dir>/.enclaver-hostfs/` resets the mount to an empty filesystem
+- deleting `<host_state_dir>/.capsule-hostfs/` resets the mount to an empty filesystem
 - each mount gets its own loopback image and quota
 - different mounts cannot share the same `host_state_dir`
 
 ## Runtime Flow
 
 1. The manifest declares `storage.mounts[]`.
-2. `enclaver run --mount <name>=<host_state_dir>` resolves the runtime binding.
-3. The host prepares or reuses `<host_state_dir>/.enclaver-hostfs/disk.img`,
-   mounts it on the parent instance, and bind-mounts it into the Sleeve
+2. `capsule-cli run --mount <name>=<host_state_dir>` resolves the runtime binding.
+3. The host prepares or reuses `<host_state_dir>/.capsule-hostfs/disk.img`,
+   mounts it on the parent instance, and bind-mounts it into the Capsule Shell
    container.
-4. `enclaver-run` exposes that filesystem through a hostfs proxy on a
+4. `capsule-shell` exposes that filesystem through a hostfs proxy on a
    host-side VSOCK port derived from the enclave CID and mount order.
-5. `odyn` mounts a FUSE filesystem at the configured `mount_path`.
+5. `capsule-runtime` mounts a FUSE filesystem at the configured `mount_path`.
 6. The application starts only after required mounts are ready.
 
 ## Operational Notes
@@ -188,10 +188,10 @@ The runtime path is:
 host state dir
   -> fixed-size loopback image
   -> host mountpoint on the parent instance
-  -> Docker bind mount into the Sleeve container
-  -> hostfs proxy in enclaver-run
+  -> Docker bind mount into the Capsule Shell container
+  -> hostfs proxy in capsule-shell
   -> vsock request/response protocol
-  -> FUSE mount in odyn
+  -> FUSE mount in capsule-runtime
   -> mount path inside the enclave
   -> application uses normal file APIs
 ```
@@ -218,15 +218,15 @@ Current operations:
 
 Relevant implementation files:
 
-- `enclaver/src/manifest.rs`
-- `enclaver/src/hostfs.rs`
-- `enclaver/src/fs_protocol.rs`
-- `enclaver/src/hostfs_service.rs`
-- `enclaver/src/hostfs_client.rs`
-- `enclaver/src/proxy/fs_host.rs`
-- `enclaver/src/run.rs`
-- `enclaver/src/bin/odyn/fs_mount.rs`
-- `enclaver/src/bin/odyn/main.rs`
+- `capsule-cli/src/manifest.rs`
+- `capsule-cli/src/hostfs.rs`
+- `capsule-cli/src/fs_protocol.rs`
+- `capsule-cli/src/hostfs_service.rs`
+- `capsule-cli/src/hostfs_client.rs`
+- `capsule-cli/src/proxy/fs_host.rs`
+- `capsule-cli/src/run.rs`
+- `capsule-cli/src/bin/capsule-runtime/fs_mount.rs`
+- `capsule-cli/src/bin/capsule-runtime/main.rs`
 
 Linux validation on a Nitro-capable host can be exercised with
 `scripts/hostfs-smoke-test.sh`.
