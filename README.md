@@ -1,8 +1,3 @@
-<p align="center">
-  <img src="docs/img/capsule-logo-color.png" width="350" />
-</p>
-
-
 Nova Enclave Capsule is an open source toolkit that simplifies packaging and running applications inside [AWS Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/). It handles the complexity of enclave networking (ingress/egress proxies), cryptographic attestation, secure key management (KMS integration), host-backed directory mounts, and application lifecycle management, so you can focus on building your application.
 
 Nova Enclave Capsule began as a fork of [enclaver-io/enclaver](https://github.com/enclaver-io/enclaver) and now lives as an independent repository with a substantially expanded runtime, build pipeline, and enclave service surface, including the Capsule API, Ethereum signing, P-384 ECDH encryption, S3-backed storage, trustless Helios RPC, host-backed directory mounts, and KMS-backed key management.
