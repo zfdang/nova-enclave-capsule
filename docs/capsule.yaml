@@ -201,51 +201,51 @@ clock_sync:
 # Summary: Parameter -> Module Mapping
 # ============================================================================
 #
-# | Parameter              | Module      | Description                                    |
-# |------------------------|-------------|------------------------------------------------|
-# | version                | BUILD       | Manifest schema version                        |
-# | name                   | BUILD       | Application name for tagging                   |
-# | target                 | BUILD       | Output release image tag                       |
-# | sources.app            | BUILD       | User application Docker image                  |
-# | sources.capsule-runtime           | BUILD       | Capsule Runtime supervisor image (binary extraction)      |
-# | sources.capsule-shell         | BUILD       | Capsule Shell base image for release packaging        |
-# | signature.certificate  | BUILD       | EIF signing certificate path                   |
-# | signature.key          | BUILD       | EIF signing private key path                   |
-# | defaults.cpu_count     | CAPSULE_SHELL      | Enclave vCPU allocation                        |
-# | defaults.memory_mb     | CAPSULE_SHELL      | Enclave memory allocation                      |
-# | ingress[].listen_port  | CAPSULE_RUNTIME+CAPSULE_SHELL | Ingress port (both sides bind proxies)         |
-# | egress.proxy_port      | CAPSULE_RUNTIME        | Local HTTP proxy port inside enclave           |
-# | egress.allow           | CAPSULE_RUNTIME        | Egress allow list (domain/IP patterns)         |
-# | egress.deny            | CAPSULE_RUNTIME        | Egress deny list (domain/IP patterns)          |
-# | kms_integration.enabled | CAPSULE_RUNTIME       | Enable Nova KMS integration                    |
-# | kms_integration.use_app_wallet | CAPSULE_RUNTIME | Enable app-wallet APIs backed by KMS KV (default: false) |
-# | kms_integration.kms_app_id | CAPSULE_RUNTIME    | Optional. Nova app ID for registry-backed `/v1/kms/*` |
-# | kms_integration.nova_app_registry | CAPSULE_RUNTIME | Optional. Registry contract for `/v1/kms/*` |
-# | api.listen_port        | CAPSULE_RUNTIME        | Capsule API port (attestation, signing, etc.) |
-# | aux_api.listen_port    | CAPSULE_RUNTIME        | Auxiliary API port (restricted access)         |
-# | helios_rpc.enabled     | CAPSULE_RUNTIME        | Enable/disable Helios RPC service              |
-# | helios_rpc.chains[].name | CAPSULE_RUNTIME      | Chain config name used in logs/UI              |
-# | helios_rpc.chains[].network_id | CAPSULE_RUNTIME | Optional chain id for reference               |
-# | helios_rpc.chains[].kind | CAPSULE_RUNTIME      | Helios client type (ethereum or opstack)       |
-# | helios_rpc.chains[].network | CAPSULE_RUNTIME   | Network selection for the selected kind        |
-# | helios_rpc.chains[].execution_rpc | CAPSULE_RUNTIME | Execution RPC URL (required)              |
-# | helios_rpc.chains[].local_rpc_port | CAPSULE_RUNTIME | Local JSON-RPC port per chain             |
-# | helios_rpc.chains[].consensus_rpc | CAPSULE_RUNTIME | Optional consensus RPC override           |
-# | helios_rpc.chains[].checkpoint | CAPSULE_RUNTIME | Optional checkpoint override (ethereum)      |
-# | storage.s3.enabled     | CAPSULE_RUNTIME        | Enable/disable S3 storage integration          |
-# | storage.s3.bucket      | CAPSULE_RUNTIME        | S3 bucket for persistent storage               |
-# | storage.s3.prefix      | CAPSULE_RUNTIME        | Prefix for S3 key isolation                    |
-# | storage.s3.region      | CAPSULE_RUNTIME        | Regional override for S3 bucket                |
-# | storage.s3.encryption.mode | CAPSULE_RUNTIME    | Storage encryption mode (plaintext or kms)     |
-# | storage.s3.encryption.key_scope | CAPSULE_RUNTIME | Derivation scope (app/object)               |
-# | storage.s3.encryption.aad_mode | CAPSULE_RUNTIME | AAD binding mode for ciphertext metadata     |
-# | storage.s3.encryption.key_version | CAPSULE_RUNTIME | Encryption key version label              |
-# | storage.s3.encryption.accept_plaintext | CAPSULE_RUNTIME | Allow plaintext reads when present      |
-# | storage.mounts[].name | BUILD+CLI | Stable runtime mount identifier                    |
-# | storage.mounts[].mount_path | CAPSULE_RUNTIME | Enclave mount path (must live under /mnt)         |
-# | storage.mounts[].required | BUILD+CLI | Fail runtime startup when the bind is missing   |
-# | storage.mounts[].size_mb | BUILD+CLI | Loopback image size in MiB                      |
-# | clock_sync.enabled     | CAPSULE_RUNTIME+CAPSULE_SHELL | Disable clock sync when set to false (default: enabled) |
-# | clock_sync.interval_secs | CAPSULE_RUNTIME      | Override clock sync interval in seconds (default 300) |
+# | Parameter                             | BUILD | CLI | CAPSULE_SHELL | CAPSULE_RUNTIME | Description                                          |
+# |---------------------------------------|:-----:|:---:|:-------------:|:---------------:|------------------------------------------------------|
+# | version                               |   ✓   |     |               |                 | Manifest schema version                              |
+# | name                                  |   ✓   |     |               |                 | Application name for tagging                         |
+# | target                                |   ✓   |     |               |                 | Output release image tag                             |
+# | sources.app                           |   ✓   |     |               |                 | User application Docker image                        |
+# | sources.capsule-runtime               |   ✓   |     |               |                 | Capsule Runtime supervisor image (binary extraction) |
+# | sources.capsule-shell                 |   ✓   |     |               |                 | Capsule Shell base image for release packaging       |
+# | signature.certificate                 |   ✓   |     |               |                 | EIF signing certificate path                         |
+# | signature.key                         |   ✓   |     |               |                 | EIF signing private key path                         |
+# | defaults.cpu_count                    |       |     |       ✓       |                 | Enclave vCPU allocation                              |
+# | defaults.memory_mb                    |       |     |       ✓       |                 | Enclave memory allocation                            |
+# | ingress[].listen_port                 |       |     |       ✓       |        ✓        | Ingress port (both sides bind proxies)               |
+# | egress.proxy_port                     |       |     |               |        ✓        | Local HTTP proxy port inside enclave                 |
+# | egress.allow                          |       |     |               |        ✓        | Egress allow list (domain/IP patterns)               |
+# | egress.deny                           |       |     |               |        ✓        | Egress deny list (domain/IP patterns)                |
+# | kms_integration.enabled               |       |     |               |        ✓        | Enable Nova KMS integration                          |
+# | kms_integration.use_app_wallet        |       |     |               |        ✓        | Enable app-wallet APIs backed by KMS KV              |
+# | kms_integration.kms_app_id            |       |     |               |        ✓        | Nova app ID for registry-backed `/v1/kms/*`          |
+# | kms_integration.nova_app_registry     |       |     |               |        ✓        | Registry contract for `/v1/kms/*`                    |
+# | api.listen_port                       |       |     |               |        ✓        | Capsule API port (attestation, signing, etc.)        |
+# | aux_api.listen_port                   |       |     |               |        ✓        | Auxiliary API port (restricted access)               |
+# | helios_rpc.enabled                    |       |     |               |        ✓        | Enable/disable Helios RPC service                    |
+# | helios_rpc.chains[].name              |       |     |               |        ✓        | Chain config name used in logs/UI                    |
+# | helios_rpc.chains[].network_id        |       |     |               |        ✓        | Optional chain id for reference                      |
+# | helios_rpc.chains[].kind              |       |     |               |        ✓        | Helios client type (ethereum or opstack)             |
+# | helios_rpc.chains[].network           |       |     |               |        ✓        | Network selection for the selected kind              |
+# | helios_rpc.chains[].execution_rpc     |       |     |               |        ✓        | Execution RPC URL (required)                         |
+# | helios_rpc.chains[].local_rpc_port    |       |     |               |        ✓        | Local JSON-RPC port per chain                        |
+# | helios_rpc.chains[].consensus_rpc     |       |     |               |        ✓        | Optional consensus RPC override                      |
+# | helios_rpc.chains[].checkpoint        |       |     |               |        ✓        | Optional checkpoint override (ethereum)              |
+# | storage.s3.enabled                    |       |     |               |        ✓        | Enable/disable S3 storage integration                |
+# | storage.s3.bucket                     |       |     |               |        ✓        | S3 bucket for persistent storage                     |
+# | storage.s3.prefix                     |       |     |               |        ✓        | Prefix for S3 key isolation                          |
+# | storage.s3.region                     |       |     |               |        ✓        | Regional override for S3 bucket                      |
+# | storage.s3.encryption.mode            |       |     |               |        ✓        | Storage encryption mode (plaintext or kms)           |
+# | storage.s3.encryption.key_scope       |       |     |               |        ✓        | Derivation scope (app/object)                        |
+# | storage.s3.encryption.aad_mode        |       |     |               |        ✓        | AAD binding mode for ciphertext metadata             |
+# | storage.s3.encryption.key_version     |       |     |               |        ✓        | Encryption key version label                         |
+# | storage.s3.encryption.accept_plaintext|       |     |               |        ✓        | Allow plaintext reads when present                   |
+# | storage.mounts[].name                 |   ✓   |  ✓  |               |                 | Stable runtime mount identifier                      |
+# | storage.mounts[].mount_path           |       |     |               |        ✓        | Enclave mount path (must live under /mnt)            |
+# | storage.mounts[].required             |   ✓   |  ✓  |               |                 | Fail runtime startup when the bind is missing        |
+# | storage.mounts[].size_mb              |   ✓   |  ✓  |               |                 | Loopback image size in MiB                           |
+# | clock_sync.enabled                    |       |     |       ✓       |        ✓        | Disable clock sync when set to false                 |
+# | clock_sync.interval_secs              |       |     |               |        ✓        | Override clock sync interval in seconds              |
 #
 # ============================================================================
