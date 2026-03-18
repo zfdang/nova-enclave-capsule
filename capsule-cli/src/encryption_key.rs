@@ -192,7 +192,7 @@ impl EncryptionKey {
 
         let hkdf = Hkdf::<Sha256>::new(Some(&salt_material), shared_secret.raw_secret_bytes());
         let mut aes_key = [0u8; 32];
-        hkdf.expand(b"capsule-api-ecdh-aes256gcm-v1", &mut aes_key)
+        hkdf.expand(b"capsule-ecdh-aes256gcm-v1", &mut aes_key)
             .map_err(|_| anyhow!("HKDF expand failed"))?;
 
         Ok(aes_key)
