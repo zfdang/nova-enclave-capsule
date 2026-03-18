@@ -27,6 +27,7 @@
             <a href="#architecture" class="nav-link">Architecture & Modules</a>
             <a href="#core-features" class="nav-link">Core Features</a>
             <a href="#api-suite" class="nav-link">Capsule API Suite</a>
+            <a href="#kms-encryption" class="nav-link">KMS Encryption</a>
             <a href="#use-cases" class="nav-link">Business Use Cases</a>
             <a href="#developer-guide" class="nav-link">Developer Guide</a>
             <a href="#contact" class="nav-link">Community & Contact</a>
@@ -158,6 +159,42 @@ run:
                 </div>
             </div>
         </section>
+
+        <!-- Section: KMS & Encryption -->
+        <section id="kms-encryption" class="section">
+            <h2>KMS Integration & Encryption</h2>
+            <p>Capsule uses a strict, E2E encrypted protocol for KMS interaction, ensuring that even the host provider cannot observe sensitive material.</p>
+            
+            <div class="specs-grid">
+                <div class="spec-item">
+                    <span class="spec-label">Key Agreement</span>
+                    <span class="spec-value">P-384 ECDH</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">KDF</span>
+                    <span class="spec-value">HKDF-SHA256</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">ECDH Label (Info)</span>
+                    <span class="spec-value"><code>capsule-ecdh-aes256gcm-v1</code></span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Symmetric Cipher</span>
+                    <span class="spec-value">AES-256-GCM</span>
+                </div>
+            </div>
+
+            <div class="troubleshooting-box">
+                <h4>Troubleshooting: <code>aead::Error</code></h4>
+                <p>If you encounter an AEAD error during KMS decryption, check the following:</p>
+                <ul>
+                    <li><strong>Public Key Sorting:</strong> HKDF salt uses <code>sort_lexicographically(client_pub, enclave_pub) || nonce</code> where keys are in uncompressed SEC1 form.</li>
+                    <li><strong>Label Integrity:</strong> Ensure the HKDF expansion uses the exact string <code>capsule-ecdh-aes256gcm-v1</code>.</li>
+                    <li><strong>Nonce Length:</strong> Standard 12-byte nonces are required for AES-GCM.</li>
+                </ul>
+            </div>
+        </section>
+
 
         <!-- Section: Use Cases -->
         <section id="use-cases" class="section highlight-bg">
