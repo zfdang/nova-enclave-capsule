@@ -1,14 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const sections = document.querySelectorAll('.section');
-    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = Array.from(document.querySelectorAll('.section[id]'));
+    const navLinks = Array.from(document.querySelectorAll('#nav .nav-link'));
+    const hashLinks = navLinks.filter(link => {
+        const href = link.getAttribute('href') || '';
+        return href.startsWith('#');
+    });
 
-    // Smooth scrolling for sidebar links
-    navLinks.forEach(link => {
+    // Smooth scrolling for in-page sidebar links only.
+    hashLinks.forEach(link => {
         link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (!href || !href.startsWith('#')) {
+                return;
+            }
+
             e.preventDefault();
-            const targetId = link.getAttribute('href').substring(1);
+            const targetId = href.substring(1);
             const targetSection = document.getElementById(targetId);
-            
+
             if (targetSection) {
                 window.scrollTo({
                     top: targetSection.offsetTop - 50,
@@ -18,24 +27,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Scroll spy to highlight active sidebar link
-    window.addEventListener('scroll', () => {
-        let current = '';
-        
+    const updateActiveNav = () => {
+        if (hashLinks.length === 0 || sections.length === 0) {
+            return;
+        }
+
+        let current = sections[0].getAttribute('id');
+
         sections.forEach(section => {
             const sectionTop = section.offsetTop;
-            const sectionHeight = section.clientHeight;
-            // Add offset for top header evaluation
-            if (pageYOffset >= (sectionTop - 150)) {
+            if (window.scrollY >= (sectionTop - 150)) {
                 current = section.getAttribute('id');
             }
         });
 
-        navLinks.forEach(link => {
+        hashLinks.forEach(link => {
             link.classList.remove('active');
-            if (link.getAttribute('href').substring(1) === current) {
+            if (link.getAttribute('href') === `#${current}`) {
                 link.classList.add('active');
             }
         });
-    });
+    };
+
+    window.addEventListener('scroll', updateActiveNav, { passive: true });
+    updateActiveNav();
 });
