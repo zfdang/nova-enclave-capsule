@@ -14,7 +14,7 @@ Dockerfile.
 Revalidated on March 17, 2026 on `app-node` using the published `capsule-cli`
 release and the published ECR images:
 - host: Amazon Linux 2023 x86_64
-- `capsule-cli 1.7.2 (git 9311be9fc75555180a01b820e8373f062ebe8161)`
+- `capsule-cli 1.8.0 (git 9311be9fc75555180a01b820e8373f062ebe8161)`
 - `public.ecr.aws/d4t4u8d2/sparsity-ai/capsule-runtime:latest`
   pulled with digest `sha256:2ab406cf9e934eb2dd31a5695c86772c8af3e3863f63bf9e783657e628ea018f`
 - `public.ecr.aws/d4t4u8d2/sparsity-ai/capsule-shell:latest`
@@ -26,7 +26,7 @@ release and the published ECR images:
 
 Validated on March 14, 2026 on `app-node`:
 - host: Amazon Linux 2023 x86_64
-- `capsule-cli 1.7.2`
+- `capsule-cli 1.8.0`
 - `docker 25.0.14`
 
 The output snippets below are the observed results from that validation run.
