@@ -32,7 +32,7 @@ Ingress traffic reaches the enclave through host-side proxies. That path is not 
 |-----------|-------|
 | Key agreement | P-384 ECDH |
 | KDF | HKDF-SHA256 |
-| HKDF info | `capsule-cli-ecdh-aes256gcm-v1` |
+| HKDF info | `capsule-ecdh-aes256gcm-v1` |
 | Symmetric cipher | AES-256-GCM |
 | Normal nonce length | 12 bytes |
 
@@ -41,7 +41,7 @@ The shared AES key is derived from:
 ```text
 shared_secret = ECDH(client_private, enclave_public)
 salt = sort_lexicographically(client_pub_sec1, enclave_pub_sec1) || nonce
-aes_key = HKDF-SHA256(shared_secret, salt, "capsule-cli-ecdh-aes256gcm-v1")
+aes_key = HKDF-SHA256(shared_secret, salt, "capsule-ecdh-aes256gcm-v1")
 ```
 
 Important interoperability details:
