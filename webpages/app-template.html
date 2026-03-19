@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Use the Nova App Template to scaffold a production-ready enclave application.">
+    <title>App Template — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Guide</div>
+            <h1 class="gradient-text">App Template</h1>
+            <p class="lead">Start from the official template repository for the fastest path to a production-ready enclave application.</p>
+        </section>
+
+        <hr class="divider">
+
+        <!-- nova-app-template -->
+        <section class="section" id="template">
+            <div class="section-header">
+                <h2>nova-app-template</h2>
+                <p>A ready-to-use starter repository that includes all the scaffolding you need.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Clone the template</div>
+<pre><code># Clone the template repository
+git clone https://github.com/sparsity-xyz/nova-app-template.git my-nova-app
+cd my-nova-app</code></pre>
+            </div>
+
+            <div class="doc-grid" style="margin-top: 2rem;">
+                <div class="doc-card">
+                    <h3>What's Included</h3>
+                    <ul style="padding-left: 1.5rem; color: var(--text-muted);">
+                        <li>Working <code>Dockerfile</code></li>
+                        <li>Pre-configured <code>capsule.yaml</code></li>
+                        <li>Sample app with Capsule API integration</li>
+                        <li>Mock service detection pattern</li>
+                        <li>Health check endpoint</li>
+                    </ul>
+                </div>
+                <div class="doc-card">
+                    <h3>What You Customize</h3>
+                    <ul style="padding-left: 1.5rem; color: var(--text-muted);">
+                        <li>Your application logic</li>
+                        <li>Ingress ports</li>
+                        <li>Egress allow list</li>
+                        <li>Resource defaults (CPU/memory)</li>
+                        <li>Storage, KMS, Helios configuration</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Workflow -->
+        <section class="section" id="workflow">
+            <div class="section-header">
+                <h2>Recommended Workflow</h2>
+                <p>Follow this four-phase approach to go from template to production.</p>
+            </div>
+
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Get Running</h3>
+                        <p>Clone the template, build the Docker image, and run <code>capsule-cli build</code> + <code>capsule-cli run</code> without any modifications. Verify the template app starts and responds on the ingress port.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Reduce to Your Use Case</h3>
+                        <p>Replace the template app logic with your own. Keep the <code>capsule.yaml</code> structure but update image names, ports, egress rules, and resource defaults to match your needs.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Integrate Capsule APIs</h3>
+                        <p>Add calls to <code>127.0.0.1:18000</code> for attestation, signing, encryption, or storage. Use the <a href="api-reference.html#mock">mock service</a> during local development.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">04</span>
+                    <div>
+                        <h3>Lock Down</h3>
+                        <p>Tighten the egress allow list to only required domains. Enable S3 encryption if using storage. Configure KMS if needed. Review the <a href="capsule-yaml.html">manifest reference</a> for security-relevant settings.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Local Development -->
+        <section class="section" id="local-dev">
+            <div class="section-header">
+                <h2>Local Development with Mock Service</h2>
+                <p>Develop and test your Capsule API integrations without running a real enclave.</p>
+            </div>
+
+            <div class="callout">
+                <h4>External Mock Endpoint</h4>
+                <p>An external Capsule API mock is available at <code>http://capsule-runtime.sparsity.cloud:18000/</code>. This is hosted by the Nova Platform team and may not be version-locked to your Capsule Runtime.</p>
+            </div>
+
+            <div class="code-box-wrapper" style="margin-top: 2rem;">
+                <div class="code-box-header">App integration pattern</div>
+<pre><code>import os
+
+IN_ENCLAVE = os.getenv("IN_ENCLAVE", "false").lower() == "true"
+MOCK_URL = os.getenv("CAPSULE_API_MOCK_URL", "http://capsule-runtime.sparsity.cloud:18000")
+API_BASE = "http://127.0.0.1:18000" if IN_ENCLAVE else MOCK_URL
+
+# Use API_BASE for all Capsule API calls
+response = requests.get(f"{API_BASE}/v1/eth/address")
+address = response.json()</code></pre>
+                <div class="code-note">
+                    Use the mock for rapid iteration. Always verify against a real enclave before production — endpoint behavior, response format, and error codes may differ.
+                </div>
+            </div>
+
+            <div class="callout warning" style="margin-top: 2rem;">
+                <h4>Mock Limitations</h4>
+                <p>The external mock is for lightweight development only. Endpoints may not exist for all API surfaces. Responses may not exactly match real enclave behavior. Error codes may differ.</p>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Proxy Support -->
+        <section class="section" id="proxy">
+            <div class="section-header">
+                <h2>HTTP Proxy Support in Your App</h2>
+                <p>Inside the enclave, outbound HTTP goes through the Capsule egress proxy. Your app must support HTTP proxying.</p>
+            </div>
+
+            <div class="doc-grid">
+                <div class="doc-card">
+                    <h3>Auto-configured</h3>
+                    <p>Capsule Runtime sets <code>http_proxy</code>, <code>https_proxy</code>, <code>HTTP_PROXY</code>, <code>HTTPS_PROXY</code> and <code>no_proxy=localhost,127.0.0.1</code> when the egress allow list is non-empty.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>What to Verify</h3>
+                    <p>Your HTTP client must honor proxy environment variables, or be explicitly configured with <code>http://127.0.0.1:&lt;egress.proxy_port&gt;</code>.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Local Traffic</h3>
+                    <p>Requests to <code>127.0.0.1</code> (Capsule API, Helios) must bypass the proxy. The <code>no_proxy</code> variable handles this automatically.</p>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper" style="margin-top: 2rem;">
+                <div class="code-box-header">Node.js example: explicit proxy agent</div>
+<pre><code>import { HttpsProxyAgent } from 'https-proxy-agent';
+
+const proxyUrl = process.env.HTTPS_PROXY;
+const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
+
+const response = await fetch('https://api.example.com/data', { agent });</code></pre>
+                <div class="code-note">
+                    The <code>examples/hn-fetcher</code> in the repository demonstrates this pattern for Node.js with explicit proxy agent construction.
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Startup Self-Test -->
+        <section class="section" id="self-test">
+            <div class="section-header">
+                <h2>Recommended Startup Self-Tests</h2>
+                <p>Add these checks to your app startup to fail fast on common misconfiguration.</p>
+            </div>
+
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Test outbound HTTP</h3>
+                        <p>Make one request to an allowed external URL through your HTTP client. Confirm it succeeds through the egress proxy.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Test Capsule API</h3>
+                        <p>Call <code>http://127.0.0.1:18000/v1/eth/address</code> — confirm it returns a valid response. This verifies the local API path.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Fail early</h3>
+                        <p>If either test fails, exit immediately with a clear error log. Don't let the app run in a broken state.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="quick-links">
+                <a href="examples.html" class="btn btn-primary">Browse Examples</a>
+                <a href="capsule-yaml.html" class="btn btn-secondary">capsule.yaml Reference</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

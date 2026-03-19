@@ -1,54 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const sections = Array.from(document.querySelectorAll('.section[id]'));
-    const navLinks = Array.from(document.querySelectorAll('#nav .nav-link'));
-    const hashLinks = navLinks.filter(link => {
+    // Highlight active nav link based on current page
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    document.querySelectorAll('#nav .nav-link').forEach(link => {
         const href = link.getAttribute('href') || '';
-        return href.startsWith('#');
+        if (href === currentPage || (currentPage === '' && href === 'index.html')) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
     });
 
-    // Smooth scrolling for in-page sidebar links only.
-    hashLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            const href = link.getAttribute('href');
-            if (!href || !href.startsWith('#')) {
-                return;
+    // Smooth scrolling for in-page anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', e => {
+            const id = anchor.getAttribute('href').substring(1);
+            const target = document.getElementById(id);
+            if (target) {
+                e.preventDefault();
+                window.scrollTo({ top: target.offsetTop - 60, behavior: 'smooth' });
             }
+        });
+    });
 
-            e.preventDefault();
-            const targetId = href.substring(1);
-            const targetSection = document.getElementById(targetId);
-
-            if (targetSection) {
-                window.scrollTo({
-                    top: targetSection.offsetTop - 50,
-                    behavior: 'smooth'
+    // Copy code button
+    document.querySelectorAll('.code-box-header').forEach(header => {
+        const btn = document.createElement('button');
+        btn.textContent = 'Copy';
+        btn.style.cssText = 'float:right;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#9a9aa2;padding:0.2rem 0.6rem;border-radius:4px;font-size:0.72rem;cursor:pointer;';
+        btn.addEventListener('click', () => {
+            const code = header.parentElement.querySelector('code');
+            if (code) {
+                navigator.clipboard.writeText(code.textContent).then(() => {
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
                 });
             }
         });
+        header.appendChild(btn);
     });
-
-    const updateActiveNav = () => {
-        if (hashLinks.length === 0 || sections.length === 0) {
-            return;
-        }
-
-        let current = sections[0].getAttribute('id');
-
-        sections.forEach(section => {
-            const sectionTop = section.offsetTop;
-            if (window.scrollY >= (sectionTop - 150)) {
-                current = section.getAttribute('id');
-            }
-        });
-
-        hashLinks.forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('href') === `#${current}`) {
-                link.classList.add('active');
-            }
-        });
-    };
-
-    window.addEventListener('scroll', updateActiveNav, { passive: true });
-    updateActiveNav();
 });

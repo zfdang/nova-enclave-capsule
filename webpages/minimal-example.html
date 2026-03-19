@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nova Enclave Capsule minimal example">
+    <title>Minimal Example | Capsule Developer Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="minimal-example.html" class="nav-link">Minimal Example</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <a href="clock-drift.html" class="nav-link">Clock Drift</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Copyable Example</div>
+            <h1 class="gradient-text">Minimal Example</h1>
+            <p class="lead">This is the smallest useful Capsule shape for a developer who wants one app, one manifest, and one successful enclave run.</p>
+            <p>Use this page after the parent instance is already prepared. The example keeps the manifest small, keeps the application boundary simple, and uses the Capsule API only from inside the enclave.</p>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>Minimal capsule.yaml</h2>
+                <p>Start with the smallest manifest that still expresses the runtime boundary clearly.</p>
+            </div>
+
+            <div class="code-box-wrapper no-top-margin">
+                <div class="code-box-header">capsule.yaml</div>
+<pre><code>version: "v1"
+name: "hello-capsule"
+target: "hello-capsule:enclave"
+
+sources:
+  app: "hello-capsule:latest"
+
+defaults:
+  cpu_count: 2
+  memory_mb: 4096
+
+ingress:
+  - listen_port: 8000
+
+egress:
+  allow:
+    - "api.openai.com"
+    - "169.254.169.254"
+
+api:
+  listen_port: 18000
+
+aux_api:
+  listen_port: 18001</code></pre>
+                <div class="code-note">If the app only calls Capsule APIs from inside the enclave, you usually do not need to expose <code>18000</code> or <code>18001</code> through <code>ingress</code>.</div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>Minimal Application Integration</h2>
+                <p>Your application talks to Capsule over localhost HTTP, not through direct Nitro SDK integration.</p>
+            </div>
+
+            <div class="code-box-wrapper no-top-margin">
+                <div class="code-box-header">Application Code Example</div>
+<pre><code>const capsuleBase = "http://127.0.0.1:18000";
+
+export async function loadCapsuleContext() {
+  const [identity, entropy] = await Promise.all([
+    fetch(`${capsuleBase}/v1/eth/address`).then((r) => r.json()),
+    fetch(`${capsuleBase}/v1/random`).then((r) => r.json()),
+  ]);
+
+  return {
+    enclaveAddress: identity.address,
+    randomBytes: entropy.random_bytes,
+  };
+}</code></pre>
+                <div class="code-note">This is the recommended app boundary: regular application code calls regular local HTTP endpoints. Capsule handles the enclave-native plumbing behind those endpoints.</div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>Build And Run Commands</h2>
+                <p>Assuming the parent instance is already prepared, these are the commands most developers need.</p>
+            </div>
+
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Build the normal application image</h3>
+                        <p>Run <code>docker build -t hello-capsule:latest .</code> and make sure the container shape already works.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Build the Capsule release image</h3>
+                        <p>Run <code>capsule-cli build -f capsule.yaml</code>.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Run the enclave</h3>
+                        <p>Run <code>sudo capsule-cli run -f capsule.yaml -p 8000:8000</code>.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">04</span>
+                    <div>
+                        <h3>Verify the endpoint and local Capsule calls</h3>
+                        <p>Call the app endpoint from outside the enclave and confirm the app can still call the Capsule API on <code>127.0.0.1:18000</code> internally.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="two-column">
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Build And Run</div>
+<pre><code>docker build -t hello-capsule:latest .
+capsule-cli build -f capsule.yaml
+sudo capsule-cli run -f capsule.yaml -p 8000:8000</code></pre>
+                    <div class="code-note">Do not treat a launch failure as an app bug first. If the host allocator or hugepage pool is wrong, fix the host before you change application code.</div>
+                </div>
+
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Verify The App</div>
+<pre><code># Example external call
+curl http://127.0.0.1:8000
+
+# Then inspect logs if needed
+docker logs &lt;capsule-shell-container&gt;</code></pre>
+                    <div class="code-note">The external verification path should prove that ingress works, while the application logs should prove that the internal Capsule API calls also succeeded.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="callout">
+                <p><strong>Next step:</strong> after this minimal flow works, move to <a href="app-template.html">App Template</a> or <a href="examples.html">Examples</a> and replace the toy shape with your actual service.</p>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

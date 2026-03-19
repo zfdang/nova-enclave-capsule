@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nova App Examples — working reference implementations for enclave applications.">
+    <title>Examples — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Guide</div>
+            <h1 class="gradient-text">Examples</h1>
+            <p class="lead">Working reference implementations that demonstrate common enclave application patterns.</p>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Example Repositories -->
+        <section class="section" id="repos">
+            <div class="section-header">
+                <h2>Example Repositories</h2>
+            </div>
+
+            <div class="architecture-grid">
+                <div class="module-card">
+                    <div class="module-label">Starter</div>
+                    <h3>nova-app-template</h3>
+                    <p>Official starter template. Clone, customize, and deploy. Includes a pre-configured <code>capsule.yaml</code>, Dockerfile, health check, and Capsule API mock integration pattern.</p>
+                    <p style="margin-top: 1rem;"><a href="https://github.com/sparsity-xyz/nova-app-template" target="_blank" rel="noreferrer">github.com/sparsity-xyz/nova-app-template</a></p>
+                </div>
+                <div class="module-card">
+                    <div class="module-label">Collection</div>
+                    <h3>nova-app-examples</h3>
+                    <p>A growing collection of example applications covering different languages, frameworks, and Capsule features (attestation, signing, encryption, storage, Helios RPC).</p>
+                    <p style="margin-top: 1rem;"><a href="https://github.com/sparsity-xyz/nova-app-examples" target="_blank" rel="noreferrer">github.com/sparsity-xyz/nova-app-examples</a></p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- hn-fetcher -->
+        <section class="section" id="hn-fetcher">
+            <div class="section-header">
+                <h2>Built-in Example: hn-fetcher</h2>
+                <p>A minimal HTTP forwarder included in the Capsule repository at <code>examples/hn-fetcher/</code>.</p>
+            </div>
+
+            <div class="doc-grid">
+                <div class="doc-card">
+                    <h3>What It Does</h3>
+                    <p>Forwards HTTP GET requests to <code>news.ycombinator.com</code> through the Capsule egress proxy and returns the upstream response. Exposes <code>GET /health</code> for liveness checks.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>What It Demonstrates</h3>
+                    <p>Explicit proxy-aware HTTP client (Node.js), egress allow-list configuration, Aux API ingress exposure, and the full build → run cycle.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Language</h3>
+                    <p>Node.js with Express. Lightweight &mdash; one source file, one dependency pattern.</p>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper" style="margin-top: 2rem;">
+                <div class="code-box-header">examples/hn-fetcher/capsule.yaml</div>
+<pre><code>version: v1
+name: "hn-fetcher"
+target: "hn-fetcher-enclave:latest"
+
+sources:
+  app: "hn-fetcher:latest"
+
+defaults:
+  memory_mb: 1500
+
+ingress:
+  - listen_port: 8000
+  - listen_port: 9001
+
+egress:
+  allow:
+    - news.ycombinator.com
+
+api:
+  listen_port: 9000
+
+aux_api:
+  listen_port: 9001</code></pre>
+                <div class="code-note">
+                    Ingress exposes both the app port (8000) and the Aux API port (9001) so external clients can request attestation documents.
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Build &amp; Run</h3>
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Steps</div>
+<pre><code># Build the app image
+cd examples/hn-fetcher
+docker build -t hn-fetcher:latest .
+
+# Build the capsule
+capsule-cli build -f capsule.yaml
+
+# Run the enclave (on a Nitro-enabled host)
+sudo capsule-cli run hn-fetcher-enclave:latest -p 8000:8000 -p 9001:9001
+
+# Verify
+curl http://localhost:8000/health
+# → {"ok":true,"upstream":"https://news.ycombinator.com"}</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Common Patterns -->
+        <section class="section" id="patterns">
+            <div class="section-header">
+                <h2>Common Application Patterns</h2>
+                <p>Patterns you'll see across examples and production apps.</p>
+            </div>
+
+            <div class="architecture-grid">
+                <div class="module-card">
+                    <div class="module-label">Pattern</div>
+                    <h3>Attestation Service</h3>
+                    <p>Expose the Aux API port through ingress so external clients can fetch attestation documents. The Aux API sanitizes the response (removes <code>public_key</code>).</p>
+                    <div class="code-box-wrapper no-top-margin" style="margin-top: 1rem;">
+<pre><code>ingress:
+  - listen_port: 8080    # app
+  - listen_port: 18001   # aux API
+aux_api:
+  listen_port: 18001</code></pre>
+                    </div>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-label">Pattern</div>
+                    <h3>Encrypted Communication</h3>
+                    <p>Client generates a P-384 keypair, derives a shared secret with the enclave public key, and encrypts data with AES-256-GCM before sending to the enclave's <code>/v1/encryption/decrypt</code>.</p>
+                    <div class="code-box-wrapper no-top-margin" style="margin-top: 1rem;">
+<pre><code># Client flow:
+# 1. GET /v1/encryption/public_key
+# 2. Generate client P-384 keypair
+# 3. ECDH → HKDF → AES-256-GCM
+# 4. POST /v1/encryption/decrypt</code></pre>
+                    </div>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-label">Pattern</div>
+                    <h3>On-Chain Data via Helios</h3>
+                    <p>Use the built-in Helios light client for trustless on-chain reads. No external RPC trust required.</p>
+                    <div class="code-box-wrapper no-top-margin" style="margin-top: 1rem;">
+<pre><code>from web3 import Web3
+
+# Trustless Base Sepolia reads
+base = Web3(Web3.HTTPProvider(
+    "http://127.0.0.1:18545"
+))
+block = base.eth.get_block('latest')</code></pre>
+                    </div>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-label">Pattern</div>
+                    <h3>Persistent Storage with S3</h3>
+                    <p>Use the Capsule S3 API for encrypted object storage, with optional KMS-derived encryption keys.</p>
+                    <div class="code-box-wrapper no-top-margin" style="margin-top: 1rem;">
+<pre><code># Store data
+POST http://127.0.0.1:18000/v1/s3/put
+{"key": "data/records.json",
+ "body": "..."}
+
+# Retrieve data
+POST http://127.0.0.1:18000/v1/s3/get
+{"key": "data/records.json"}</code></pre>
+                    </div>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-label">Pattern</div>
+                    <h3>Transaction Signing</h3>
+                    <p>Sign EIP-1559 transactions inside the enclave using the Capsule eth signing API.</p>
+                    <div class="code-box-wrapper no-top-margin" style="margin-top: 1rem;">
+<pre><code># Get enclave address
+GET /v1/eth/address
+
+# Sign a transaction
+POST /v1/eth/sign-tx
+{
+  "chain_id": 84532,
+  "to": "0x...",
+  "value": "0x0",
+  "data": "0x..."
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-label">Pattern</div>
+                    <h3>Host-Backed Data Directory</h3>
+                    <p>Mount a persistent writable directory for application state that survives enclave restarts.</p>
+                    <div class="code-box-wrapper no-top-margin" style="margin-top: 1rem;">
+<pre><code># capsule.yaml
+storage:
+  mounts:
+    - name: appdata
+      mount_path: /mnt/appdata
+      required: true
+      size_mb: 10240
+
+# Run with binding
+sudo capsule-cli run app:latest \
+  --mount appdata=/var/lib/app/data</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="quick-links">
+                <a href="https://github.com/sparsity-xyz/nova-app-template" target="_blank" rel="noreferrer" class="btn btn-primary">Get the Template</a>
+                <a href="https://github.com/sparsity-xyz/nova-app-examples" target="_blank" rel="noreferrer" class="btn btn-secondary">Browse Examples</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

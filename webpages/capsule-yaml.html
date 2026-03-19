@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Complete capsule.yaml manifest reference — all configuration options for Nova Enclave Capsule.">
+    <title>capsule.yaml Reference — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Reference</div>
+            <h1 class="gradient-text">capsule.yaml</h1>
+            <p class="lead">Complete manifest reference — every field that controls how your enclave application is built and run.</p>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Minimal Example -->
+        <section class="section" id="minimal">
+            <div class="section-header">
+                <h2>Minimal Manifest</h2>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">capsule.yaml — minimal</div>
+<pre><code>version: v1
+name: "my-app"
+target: "my-app-enclave:latest"
+
+sources:
+  app: "my-app:latest"
+
+ingress:
+  - listen_port: 8080
+
+api:
+  listen_port: 18000</code></pre>
+                <div class="code-note">
+                    Only <code>version</code>, <code>name</code>, <code>target</code>, and <code>sources.app</code> are strictly required. Defaults apply for CPU (2), memory (4096 MiB), and other settings.
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Full Reference -->
+        <section class="section" id="full">
+            <div class="section-header">
+                <h2>Complete Reference</h2>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">capsule.yaml — all fields</div>
+<pre><code>version: "v1"                          # Schema version (required)
+name: "your-service"                   # Friendly name (required)
+target: "repo/name:tag"                # Release image tag (required)
+
+sources:
+  app: "repo/app:tag"                  # Application image (REQUIRED)
+  capsule-runtime: "..."               # Override runtime image (optional)
+  capsule-shell: "..."                 # Override shell image (optional)
+
+signature:
+  certificate: ./path/to/cert.pem      # EIF signing certificate
+  key: ./path/to/key.pem               # EIF signing private key
+
+defaults:
+  cpu_count: 2                         # vCPU count (default: 2)
+  memory_mb: 4096                      # Memory in MiB (default: 4096)
+
+ingress:                               # Host → Enclave TCP listeners
+  - listen_port: 8080
+
+egress:                                # Outbound HTTP proxy
+  proxy_port: 10000
+  allow:
+    - "api.example.com"
+    - "169.254.169.254"                # IMDS
+    - "**.amazonaws.com"               # Wildcard subdomains
+    - "0.0.0.0/0"                      # All IPv4
+  deny:
+    - "*.secret.internal"
+
+api:
+  listen_port: 18000                   # Capsule API port
+
+aux_api:
+  listen_port: 18001                   # Auxiliary API port (default: api + 1)
+
+helios_rpc:                            # Trustless multi-chain RPC
+  enabled: true
+  chains:
+    - name: "L2-base-sepolia"
+      network_id: "84532"
+      kind: "opstack"
+      network: "base-sepolia"
+      execution_rpc: "https://sepolia.base.org"
+      local_rpc_port: 18545
+      consensus_rpc: "..."             # Optional
+      checkpoint: "0x..."              # Optional (ethereum only)
+
+kms_integration:                       # Nova KMS + app wallet
+  enabled: true
+  use_app_wallet: true
+  kms_app_id: 49
+  nova_app_registry: "0x0f68..."       # Registry contract address
+
+storage:
+  s3:                                  # S3 persistence
+    enabled: true
+    bucket: "my-app-data"
+    prefix: "apps/my-service/"
+    region: "us-east-1"                # Optional
+    encryption:
+      mode: "kms"                      # plaintext | kms
+      key_scope: "object"              # app | object
+      aad_mode: "key"                  # none | key | key+version
+      key_version: "v1"
+      accept_plaintext: true
+
+  mounts:                              # Host-backed directories
+    - name: "appdata"
+      mount_path: "/mnt/appdata"
+      required: true
+      size_mb: 10240
+
+clock_sync:                            # Wall-clock synchronization
+  enabled: true                        # Default: true
+  interval_secs: 300                   # Default: 300</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Field-by-field reference -->
+        <section class="section" id="fields-top">
+            <div class="section-header">
+                <h2>Top-Level Fields</h2>
+            </div>
+
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>version</td><td>Yes</td><td>Schema version. Currently <code>"v1"</code>.</td></tr>
+                    <tr><td>name</td><td>Yes</td><td>Human-readable application name.</td></tr>
+                    <tr><td>target</td><td>Yes</td><td>Docker image tag for the built capsule image.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section" id="fields-sources">
+            <h2>sources</h2>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>sources.app</td><td>Yes</td><td>Docker image for your application.</td></tr>
+                    <tr><td>sources.capsule-runtime</td><td>No</td><td>Override the Capsule Runtime image. Defaults to public ECR.</td></tr>
+                    <tr><td>sources.capsule-shell</td><td>No</td><td>Override the Capsule Shell image. Defaults to public ECR.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section" id="fields-defaults">
+            <h2>defaults</h2>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>defaults.cpu_count</td><td>2</td><td>Number of vCPUs allocated to the enclave.</td></tr>
+                    <tr><td>defaults.memory_mb</td><td>4096</td><td>Memory in MiB allocated to the enclave.</td></tr>
+                </tbody>
+            </table>
+            <div class="callout" style="margin-top: 1rem;">
+                <h4>Priority order</h4>
+                <p>CLI flags (<code>--cpu-count</code>, <code>--memory-mb</code>) override manifest defaults, which override hardcoded defaults.</p>
+            </div>
+        </section>
+
+        <section class="section" id="fields-ingress">
+            <h2>ingress</h2>
+            <p>List of TCP ports that the enclave listens on. Each port is bridged from the host to the enclave over vsock.</p>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>listen_port</td><td>Yes</td><td>TCP port number. Must match a port your app listens on, or the Aux API port.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section" id="fields-egress">
+            <h2>egress</h2>
+            <p>Outbound HTTP/HTTPS proxy configuration. The enclave has no direct network — all outbound traffic goes through this proxy.</p>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>egress.proxy_port</td><td>10000</td><td>Local port for the HTTP proxy inside the enclave.</td></tr>
+                    <tr><td>egress.allow</td><td>[]</td><td>List of allowed destination hosts/IPs. Supports <code>**</code> for wildcard subdomains, CIDR notation for IPs.</td></tr>
+                    <tr><td>egress.deny</td><td>[]</td><td>List of denied destinations. Deny takes precedence over allow.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="callout" style="margin-top: 1rem;">
+                <h4>Common allow entries</h4>
+                <p><code>169.254.169.254</code> — AWS IMDS (required for S3 credentials)<br>
+                <code>**.amazonaws.com</code> — AWS services (S3, etc.)<br>
+                <code>0.0.0.0/0</code> — All IPv4 addresses (use with caution)</p>
+            </div>
+        </section>
+
+        <section class="section" id="fields-helios">
+            <h2>helios_rpc</h2>
+            <p>Helios light client for trustless on-chain reads. Each chain entry runs an independent light client instance.</p>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>enabled</td><td>No</td><td>Enable Helios when <code>true</code>.</td></tr>
+                    <tr><td>chains[].name</td><td>Yes</td><td>Human-readable chain name.</td></tr>
+                    <tr><td>chains[].network_id</td><td>No</td><td>Chain ID for reference.</td></tr>
+                    <tr><td>chains[].kind</td><td>Yes</td><td><code>ethereum</code> or <code>opstack</code>.</td></tr>
+                    <tr><td>chains[].network</td><td>Yes</td><td>Network slug (e.g., <code>mainnet</code>, <code>base-sepolia</code>).</td></tr>
+                    <tr><td>chains[].execution_rpc</td><td>Yes</td><td>Upstream execution RPC URL.</td></tr>
+                    <tr><td>chains[].local_rpc_port</td><td>Yes</td><td>Local port on <code>127.0.0.1</code> for this chain.</td></tr>
+                    <tr><td>chains[].consensus_rpc</td><td>No</td><td>Custom consensus RPC URL.</td></tr>
+                    <tr><td>chains[].checkpoint</td><td>No</td><td>Weak subjectivity checkpoint (ethereum only).</td></tr>
+                </tbody>
+            </table>
+
+            <div class="doc-grid" style="margin-top: 1.5rem;">
+                <div class="doc-card">
+                    <h3>Supported Ethereum Networks</h3>
+                    <p><code>mainnet</code>, <code>sepolia</code>, <code>holesky</code></p>
+                </div>
+                <div class="doc-card">
+                    <h3>Supported OP Stack Networks</h3>
+                    <p><code>op-mainnet</code>, <code>base</code>, <code>base-sepolia</code>, <code>worldchain</code>, <code>zora</code>, <code>unichain</code></p>
+                </div>
+            </div>
+
+            <div class="callout" style="margin-top: 1.5rem;">
+                <h4>KMS + Helios</h4>
+                <p>When <code>kms_integration</code> uses registry-backed discovery, one Helios chain must use <code>local_rpc_port: 18545</code>. Capsule Runtime waits for <code>:18545</code> to be ready before starting the Capsule API.</p>
+            </div>
+        </section>
+
+        <section class="section" id="fields-kms">
+            <h2>kms_integration</h2>
+            <p>Nova KMS integration for key derivation, key-value storage, and app wallets.</p>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>enabled</td><td>false</td><td>Enable Nova KMS integration.</td></tr>
+                    <tr><td>use_app_wallet</td><td>false</td><td>Enable app wallet routes (<code>/v1/app-wallet/*</code>).</td></tr>
+                    <tr><td>kms_app_id</td><td>—</td><td>App ID for registry-backed KMS discovery.</td></tr>
+                    <tr><td>nova_app_registry</td><td>—</td><td>Registry contract address for KMS discovery.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section" id="fields-storage">
+            <h2>storage</h2>
+
+            <h3>storage.s3</h3>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>enabled</td><td>false</td><td>Enable S3 storage API.</td></tr>
+                    <tr><td>bucket</td><td>—</td><td>S3 bucket name.</td></tr>
+                    <tr><td>prefix</td><td>—</td><td>Key prefix for all objects.</td></tr>
+                    <tr><td>region</td><td>auto</td><td>AWS region (auto-detected if omitted).</td></tr>
+                    <tr><td>encryption.mode</td><td>plaintext</td><td><code>plaintext</code> or <code>kms</code>.</td></tr>
+                    <tr><td>encryption.key_scope</td><td>app</td><td><code>app</code> (single key) or <code>object</code> (per-object key).</td></tr>
+                    <tr><td>encryption.aad_mode</td><td>none</td><td><code>none</code>, <code>key</code>, or <code>key+version</code>.</td></tr>
+                    <tr><td>encryption.key_version</td><td>—</td><td>Version tag for key rotation.</td></tr>
+                    <tr><td>encryption.accept_plaintext</td><td>false</td><td>Allow reading unencrypted objects when encryption is on.</td></tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 2rem;">storage.mounts</h3>
+            <p>Host-backed directory mounts. Each mount is a persistent writable directory inside the enclave backed by a loopback ext4 image on the host.</p>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>name</td><td>—</td><td>Mount name. Used in <code>--mount name=path</code> CLI binding.</td></tr>
+                    <tr><td>mount_path</td><td>—</td><td>Path inside the enclave (e.g., <code>/mnt/appdata</code>).</td></tr>
+                    <tr><td>required</td><td>true</td><td>If <code>true</code>, startup fails if the mount binding is missing.</td></tr>
+                    <tr><td>size_mb</td><td>—</td><td>Storage quota in MiB. Writes fail with ENOSPC when full.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="callout warning" style="margin-top: 1.5rem;">
+                <h4>Host mounts are NOT trusted</h4>
+                <p>The host controls the backing storage. The host can observe filenames, file sizes, and timing. It can tamper with bytes on disk. Never treat mounted content as trusted code or configuration. Add application-level encryption or integrity checks if needed.</p>
+            </div>
+        </section>
+
+        <section class="section" id="fields-clock">
+            <h2>clock_sync</h2>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>enabled</td><td>true</td><td>Enable wall-clock synchronization with the host.</td></tr>
+                    <tr><td>interval_secs</td><td>300</td><td>Seconds between periodic time sync updates.</td></tr>
+                </tbody>
+            </table>
+            <p style="margin-top: 1rem;">Omitting the <code>clock_sync</code> block entirely keeps the default behavior (enabled, 300s interval). Set <code>enabled: false</code> to explicitly disable.</p>
+        </section>
+
+        <section class="section" id="fields-signature">
+            <h2>signature</h2>
+            <p>Optional EIF signing for build-time image integrity.</p>
+            <table class="config-table">
+                <thead>
+                    <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>certificate</td><td>Yes (if signing)</td><td>Path to the PEM certificate file.</td></tr>
+                    <tr><td>key</td><td>Yes (if signing)</td><td>Path to the PEM private key file.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section">
+            <div class="quick-links">
+                <a href="api-reference.html" class="btn btn-primary">Capsule API Reference</a>
+                <a href="cli-reference.html" class="btn btn-secondary">CLI Reference</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

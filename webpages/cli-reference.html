@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="capsule-cli command reference — build and run commands, flags, and options.">
+    <title>CLI Reference — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Reference</div>
+            <h1 class="gradient-text">CLI Reference</h1>
+            <p class="lead"><code>capsule-cli</code> — build and run Nova Enclave Capsule applications.</p>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Global Options -->
+        <section class="section" id="global">
+            <div class="section-header">
+                <h2>Global Options</h2>
+            </div>
+
+            <table class="config-table">
+                <thead>
+                    <tr><th>Flag</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>-v, --verbose</td><td>Increase logging verbosity. Can be repeated (<code>-vv</code>) for more detail.</td></tr>
+                    <tr><td>-V, --version</td><td>Print version information and exit.</td></tr>
+                    <tr><td>-h, --help</td><td>Print help information.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Build Command -->
+        <section class="section" id="build">
+            <div class="section-header">
+                <h2>capsule-cli build</h2>
+                <p>Package a Docker application image into a Nova Enclave Capsule release image.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Usage</div>
+<pre><code>capsule-cli build [OPTIONS]</code></pre>
+            </div>
+
+            <table class="config-table" style="margin-top: 2rem;">
+                <thead>
+                    <tr><th>Flag</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>-f, --file &lt;PATH&gt;</td><td>capsule.yaml</td><td>Path to the manifest file. Use <code>-</code> to read from stdin.</td></tr>
+                    <tr><td>--pull</td><td>false</td><td>Always pull source images before building, even if they exist locally.</td></tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 2rem;">What build does</h3>
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Load and validate manifest</h3>
+                        <p>Parse <code>capsule.yaml</code>, resolve image references, validate all fields.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Amend source image</h3>
+                        <p>Inject <code>/sbin/capsule-runtime</code> and <code>/etc/capsule/capsule.yaml</code> into the app image.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Build EIF</h3>
+                        <p>Run <code>nitro-cli build-enclave</code> in an ephemeral container to produce the Enclave Image File.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">04</span>
+                    <div>
+                        <h3>Package into Capsule Shell</h3>
+                        <p>Append the EIF and manifest to the Capsule Shell base image. Tag the result as the <code>target</code> image.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Examples</h3>
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Build examples</div>
+<pre><code># Default manifest file
+capsule-cli build
+
+# Custom manifest
+capsule-cli build -f my-service.yaml
+
+# Force pull source images
+capsule-cli build --pull
+
+# Read manifest from stdin
+cat capsule.yaml | capsule-cli build -f -
+
+# Verbose output
+capsule-cli build -v -f capsule.yaml</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Run Command -->
+        <section class="section" id="run">
+            <div class="section-header">
+                <h2>capsule-cli run</h2>
+                <p>Execute a pre-built Nova Enclave Capsule image on a Nitro-enabled host.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Usage</div>
+<pre><code>capsule-cli run [OPTIONS] [IMAGE]</code></pre>
+            </div>
+
+            <table class="config-table" style="margin-top: 2rem;">
+                <thead>
+                    <tr><th>Flag</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>IMAGE</td><td>—</td><td>Pre-built capsule image name. Only used if <code>-f</code> is not specified.</td></tr>
+                    <tr><td>-f, --file &lt;PATH&gt;</td><td>—</td><td>Manifest file. Resolves the <code>target</code> field as the image name.</td></tr>
+                    <tr><td>-p, --publish &lt;MAP&gt;</td><td>—</td><td>Port mapping: <code>HOST:ENCLAVE</code>. Repeatable.</td></tr>
+                    <tr><td>-d, --debug-mode</td><td>false</td><td>Enable the debug console for interactive enclave access.</td></tr>
+                    <tr><td>--cpu-count &lt;INT&gt;</td><td>manifest/2</td><td>Override vCPU count for this run.</td></tr>
+                    <tr><td>--memory-mb &lt;INT&gt;</td><td>manifest/4096</td><td>Override memory allocation (MiB) for this run.</td></tr>
+                    <tr><td>--mount &lt;BIND&gt;</td><td>—</td><td>Host-backed mount: <code>NAME=HOST_PATH</code>. Repeatable.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="callout" style="margin-top: 1.5rem;">
+                <h4>Parameter priority</h4>
+                <p><strong>1.</strong> CLI flags (highest) → <strong>2.</strong> Manifest <code>defaults</code> section → <strong>3.</strong> Hardcoded defaults (CPU: 2, Memory: 4096 MiB)</p>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Examples</h3>
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Run examples</div>
+<pre><code># Basic run with image name
+sudo capsule-cli run my-app-enclave:latest
+
+# Run using manifest (resolves target image)
+sudo capsule-cli run -f capsule.yaml
+
+# Port mapping
+sudo capsule-cli run my-app:latest -p 8080:80 -p 9000:9000
+
+# Resource overrides
+sudo capsule-cli run my-app:latest --cpu-count 4 --memory-mb 8192
+
+# With debug console
+sudo capsule-cli run my-app:latest -d -p 8080:80
+
+# With host-backed mount
+sudo capsule-cli run my-app:latest \
+  -p 8080:80 \
+  --mount appdata=/var/lib/my-service/appdata
+
+# Multiple mounts
+sudo capsule-cli run my-app:latest \
+  --mount appdata=/data/app \
+  --mount cache=/data/cache
+
+# Full example
+sudo capsule-cli run -v my-app-enclave:latest \
+  --cpu-count 4 \
+  --memory-mb 8192 \
+  -p 8080:8080 \
+  -p 18001:18001 \
+  --mount appdata=/var/lib/my-service/data \
+  -d</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Port Mapping -->
+        <section class="section" id="ports">
+            <div class="section-header">
+                <h2>Port Mapping</h2>
+                <p>The <code>-p</code> flag maps host TCP ports to enclave ingress ports.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Port mapping format</div>
+<pre><code># Format: HOST_PORT:ENCLAVE_PORT
+-p 8080:80        # Host 8080 → Enclave 80
+-p 8080:8080      # Same port on both sides
+-p 9001:18001     # Map Aux API to host port 9001</code></pre>
+            </div>
+
+            <div class="callout" style="margin-top: 1.5rem;">
+                <h4>Important</h4>
+                <p>The enclave port in <code>-p</code> must match a <code>listen_port</code> in the <code>ingress</code> section of your manifest. Ports not declared in <code>ingress</code> are not accessible.</p>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Mount Binding -->
+        <section class="section" id="mounts">
+            <div class="section-header">
+                <h2>Mount Binding</h2>
+                <p>The <code>--mount</code> flag connects manifest-declared mounts to host directories.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Mount binding format</div>
+<pre><code># Format: MOUNT_NAME=HOST_STATE_DIR
+--mount appdata=/var/lib/my-service/appdata
+
+# The MOUNT_NAME must match a storage.mounts[].name in capsule.yaml
+# The HOST_STATE_DIR is a directory on the host for persistence</code></pre>
+            </div>
+
+            <div class="doc-grid" style="margin-top: 1.5rem;">
+                <div class="doc-card">
+                    <h3>Persistence</h3>
+                    <p>Reuse the same <code>HOST_STATE_DIR</code> across runs to preserve data. A new directory or deleting <code>.capsule-hostfs/</code> resets to empty.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Required vs. Optional</h3>
+                    <p>If <code>required: true</code> in the manifest, the run fails if the <code>--mount</code> binding is missing. Optional mounts are skipped with a warning.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Installation -->
+        <section class="section" id="install">
+            <div class="section-header">
+                <h2>Installation</h2>
+            </div>
+
+            <div class="two-column">
+                <div>
+                    <h3>Pre-built binary</h3>
+                    <div class="code-box-wrapper no-top-margin">
+<pre><code># Download
+curl -LO https://github.com/sparsity-xyz/\
+nova-enclave-capsule/releases/latest/\
+download/capsule-cli-x86_64-unknown-\
+linux-musl.tar.gz
+
+# Extract and install
+tar xzf capsule-cli-*.tar.gz
+sudo mv capsule-cli /usr/local/bin/</code></pre>
+                    </div>
+                </div>
+                <div>
+                    <h3>Build from source</h3>
+                    <div class="code-box-wrapper no-top-margin">
+<pre><code># Requires Rust + cross
+cargo install cross
+
+cd capsule-cli
+cross build --release \
+  --target x86_64-unknown-linux-musl \
+  --features run_enclave,capsule-runtime
+
+# Binary at:
+# target/x86_64-unknown-linux-musl/
+#   release/capsule-cli</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="quick-links">
+                <a href="getting-started.html" class="btn btn-primary">Getting Started</a>
+                <a href="capsule-yaml.html" class="btn btn-secondary">capsule.yaml Reference</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

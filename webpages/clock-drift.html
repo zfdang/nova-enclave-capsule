@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nova Enclave Capsule clock drift guide">
+    <title>Clock Drift | Capsule Developer Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="minimal-example.html" class="nav-link">Minimal Example</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <a href="clock-drift.html" class="nav-link">Clock Drift</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Operations</div>
+            <h1 class="gradient-text">Clock Drift</h1>
+            <p class="lead">Long-running enclaves can drift away from the parent instance wall clock, which is enough to break real application flows.</p>
+            <p>Developers usually see this as intermittent JWT expiry problems, TLS certificate validation failures, or mismatched timestamp windows. Capsule includes host-assisted clock sync so application teams do not need to build and maintain time synchronization themselves.</p>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>Why You Should Care</h2>
+                <p>Clock drift matters as soon as your application depends on absolute time instead of just elapsed time.</p>
+            </div>
+
+            <div class="doc-grid">
+                <div class="doc-card">
+                    <div class="module-label">Common Symptoms</div>
+                    <h3>JWT and token validation starts failing</h3>
+                    <p>If the enclave clock drifts far enough, even correct tokens can look expired or not yet valid.</p>
+                </div>
+                <div class="doc-card">
+                    <div class="module-label">Common Symptoms</div>
+                    <h3>TLS and certificate checks become unreliable</h3>
+                    <p>Clock errors can make certificate validity windows look wrong and produce confusing transport failures.</p>
+                </div>
+                <div class="doc-card">
+                    <div class="module-label">Developer Impact</div>
+                    <h3>The failure often looks unrelated to time</h3>
+                    <p>Because the app is otherwise healthy, teams often debug credentials, networking, or SDK logic before realizing the problem is clock drift.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>What Capsule Does By Default</h2>
+                <p>Capsule enables clock sync unless you explicitly disable it.</p>
+            </div>
+
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Capsule Shell starts a host-side time server</h3>
+                        <p>The host launches a VSOCK time service before the enclave is considered fully ready.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Capsule Runtime performs an initial sync</h3>
+                        <p>At startup, Capsule Runtime synchronizes the enclave wall clock before the application settles into normal runtime behavior.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Capsule Runtime keeps syncing periodically</h3>
+                        <p>If <code>clock_sync</code> is omitted, the default interval is <code>300</code> seconds. You can tighten the interval if your workload is especially time-sensitive.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>Manifest Configuration</h2>
+                <p>Most teams should keep the defaults and only change the interval if they have a specific reason.</p>
+            </div>
+
+            <div class="two-column">
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Keep The Default Behavior</div>
+<pre><code># Omit the block entirely
+
+# Or keep the default explicitly
+clock_sync: {}</code></pre>
+                    <div class="code-note">Leaving the feature enabled is the normal path. Start here unless you know why you want different behavior.</div>
+                </div>
+
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Tighten The Sync Interval</div>
+<pre><code>clock_sync:
+  interval_secs: 60</code></pre>
+                    <div class="code-note">Use a shorter interval when your application depends on tighter wall-clock behavior. Keep in mind that this still follows the parent instance clock.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="troubleshooting-box">
+                <h4>What clock sync does not solve</h4>
+                <p>Clock sync improves operational correctness, but it does not create a new trusted time root. If the parent instance time is wrong, the enclave time will also be wrong.</p>
+                <ul>
+                    <li>Keep clock sync enabled for JWT, TLS, and timestamped credential flows.</li>
+                    <li>Use monotonic time inside the application for elapsed-time measurement.</li>
+                    <li>If you disable clock sync, expect drift in long-lived enclaves and plan around it explicitly.</li>
+                </ul>
+            </div>
+
+            <div class="callout">
+                <p><strong>Next step:</strong> once clock handling is clear, move to <a href="nitro-setup.html">Nitro Host Setup</a> if you still need to prepare allocator memory or hugepages.</p>
+                <p><a href="../docs/nitro_enclave_clock_drift.md">Read the deeper implementation note</a></p>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

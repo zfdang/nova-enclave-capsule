@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nova Enclave Capsule architecture — build-time, host-side, and enclave-side flows.">
+    <title>Architecture — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Architecture</div>
+            <h1 class="gradient-text">How Capsule Works</h1>
+            <p class="lead">Capsule operates across three domains: build time, host/container runtime, and enclave runtime.</p>
+        </section>
+
+        <!-- Component Diagram -->
+        <section class="section" id="diagram">
+            <div class="section-header">
+                <h2>Component Overview</h2>
+                <p>Host-side and enclave-side services, traffic paths, and integration points at a glance.</p>
+            </div>
+            <div class="diagram-container">
+                <img src="images/diagram-capsule-components.svg" alt="Nova Enclave Capsule runtime component diagram showing host-side capsule-shell services, enclave-side capsule-runtime, Capsule API, host-backed mounts, and integration paths" width="1240" height="796">
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Build Time -->
+        <section class="section" id="build">
+            <div class="section-header">
+                <h2>Build-Time Flow</h2>
+                <p><code>capsule-cli build</code> transforms your Docker app image into a self-contained enclave package.</p>
+            </div>
+
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Load capsule.yaml</h3>
+                        <p>Parse the manifest, resolve image references, and validate configuration.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Amend App Image</h3>
+                        <p>Inject <code>/sbin/capsule-runtime</code> binary and <code>/etc/capsule/capsule.yaml</code> configuration into the source application image.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Tag Intermediate</h3>
+                        <p>Tag the amended image as <code>capsule-intermediate-&lt;uuid&gt;:latest</code> for the EIF build step.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">04</span>
+                    <div>
+                        <h3>Build EIF</h3>
+                        <p>Run <code>nitro-cli build-enclave</code> inside an ephemeral Nitro CLI container to produce <code>application.eif</code>.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">05</span>
+                    <div>
+                        <h3>Package Capsule Shell</h3>
+                        <p>Append the EIF file and capsule manifest as new layers to the Capsule Shell base image. The result is the final release image.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Runtime Flow -->
+        <section class="section" id="runtime">
+            <div class="section-header">
+                <h2>Runtime Flow</h2>
+                <p>When you run the capsule image, two execution domains start: the host side and the enclave side.</p>
+            </div>
+
+            <h3>Host Side (Capsule Shell)</h3>
+            <div class="steps-v2" style="margin-bottom: 3rem;">
+                <div class="step-card">
+                    <span class="step-tag">H1</span>
+                    <div>
+                        <h3>Start Host Proxies</h3>
+                        <p>Launch egress proxy, hostfs mount services, and clock-sync server on the host side of the vsock boundary.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">H2</span>
+                    <div>
+                        <h3>Launch Enclave</h3>
+                        <p>Run <code>nitro-cli run-enclave</code> with the EIF, allocated CPU, and memory from the manifest or CLI flags.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">H3</span>
+                    <div>
+                        <h3>Start Ingress Proxies</h3>
+                        <p>Open host-side TCP listeners for each configured ingress port and bridge traffic into the enclave over vsock.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Enclave Side (Capsule Runtime)</h3>
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">E1</span>
+                    <div>
+                        <h3>Bootstrap</h3>
+                        <p>Capsule Runtime starts as PID 1. Configures loopback networking and seeds RNG from the Nitro Secure Module (NSM).</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">E2</span>
+                    <div>
+                        <h3>Mount Host Directories</h3>
+                        <p>Connect to host-side hostfs proxies over vsock and FUSE-mount each declared directory.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">E3</span>
+                    <div>
+                        <h3>Start Platform Services</h3>
+                        <p>In order: egress proxy → clock sync → Helios RPC → wait for Helios :18545 if KMS needs it → Capsule API + Aux API → ingress listeners.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">E4</span>
+                    <div>
+                        <h3>Launch Application</h3>
+                        <p>Execute the user's original Docker entrypoint. All platform services are available on <code>127.0.0.1</code>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Component Distribution -->
+        <section class="section" id="components">
+            <div class="section-header">
+                <h2>Core Components</h2>
+                <p>Three binaries and a manifest power the entire flow.</p>
+            </div>
+
+            <div class="architecture-grid">
+                <div class="module-card">
+                    <div class="module-label">Build + Host</div>
+                    <h3>capsule-cli</h3>
+                    <p>The developer-facing CLI. Handles <code>build</code> (image packaging) and <code>run</code> (enclave launch and supervision) commands.</p>
+                </div>
+                <div class="module-card">
+                    <div class="module-label">Host Container</div>
+                    <h3>Capsule Shell</h3>
+                    <p>The host-side container runtime. Starts proxies, launches the enclave via <code>nitro-cli</code>, and bridges traffic across vsock.</p>
+                </div>
+                <div class="module-card">
+                    <div class="module-label">Inside Enclave</div>
+                    <h3>Capsule Runtime</h3>
+                    <p>Runs as PID 1 inside the enclave. Bootstraps the environment, starts all platform services, then launches your app.</p>
+                </div>
+                <div class="module-card">
+                    <div class="module-label">Configuration</div>
+                    <h3>capsule.yaml</h3>
+                    <p>Single manifest file that controls build-time image sources, runtime resources, networking, API, storage, and all service configuration.</p>
+                </div>
+                <div class="module-card">
+                    <div class="module-label">Inside Enclave</div>
+                    <h3>Capsule API</h3>
+                    <p>HTTP API server on <code>127.0.0.1:18000</code> (default). Provides <code>/v1/*</code> endpoints for attestation, signing, encryption, S3, KMS, and wallet.</p>
+                </div>
+                <div class="module-card">
+                    <div class="module-label">Inside Enclave</div>
+                    <h3>Aux API</h3>
+                    <p>Restricted proxy on port 18001 (default). Required for attestation flows — sanitizes the attestation document by removing the public key.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Traffic Paths -->
+        <section class="section" id="traffic">
+            <div class="section-header">
+                <h2>Traffic Paths</h2>
+                <p>All communication between host and enclave passes through vsock channels over well-known ports.</p>
+            </div>
+
+            <div class="doc-grid">
+                <div class="doc-card">
+                    <h3>Ingress</h3>
+                    <p>External → Host TCP → vsock → Enclave ingress listener → <code>127.0.0.1:app_port</code> inside enclave.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Egress</h3>
+                    <p>Enclave app → <code>127.0.0.1:proxy_port</code> (HTTP proxy) → vsock → Host egress proxy → Internet. Controlled by <code>egress.allow/deny</code>.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Clock Sync</h3>
+                    <p>Host time server → vsock → Enclave clock-sync client. Estimates RTT and offset, updates <code>CLOCK_REALTIME</code>.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Host Mounts</h3>
+                    <p>Enclave FUSE client → vsock → Host hostfs proxy → loopback ext4 image on parent instance disk.</p>
+                </div>
+            </div>
+
+            <div class="callout" style="margin-top: 2rem;">
+                <h4>VSOCK Port Scheme</h4>
+                <p><code>17000</code> — app status stream &nbsp; | &nbsp; <code>17001</code> — app log stream</p>
+                <p><code>20000 + (CID × 128) + 0</code> — host egress proxy &nbsp; | &nbsp; <code>+ 1</code> — clock sync &nbsp; | &nbsp; <code>+ 16 + N</code> — hostfs mount N</p>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Runtime Process Diagram -->
+        <section class="section" id="process">
+            <div class="section-header">
+                <h2>Enclave Process Model</h2>
+                <p>Everything inside the enclave runs under Capsule Runtime (PID 1).</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Capsule Runtime Process Tree</div>
+<pre><code>┌─ AWS Nitro Enclave ─────────────────────────────┐
+│                                                  │
+│  Capsule Runtime (PID 1)                         │
+│  ├─ Ingress Proxy (TCP → vsock bridge)           │
+│  ├─ Egress Proxy (HTTP proxy → vsock → host)     │
+│  ├─ Clock Sync (periodic CLOCK_REALTIME update)  │
+│  ├─ Helios RPC (trustless light client)          │
+│  ├─ Console / Log Streaming (ring buffer)        │
+│  ├─ Capsule API (/v1/*)                          │
+│  │   ├─ Attestation                              │
+│  │   ├─ Eth Signing                              │
+│  │   ├─ Encryption (P-384 + AES-256-GCM)        │
+│  │   ├─ Random (NSM-backed)                      │
+│  │   ├─ S3 Storage                               │
+│  │   ├─ Nova KMS                                 │
+│  │   └─ App Wallet                               │
+│  ├─ Aux API (restricted attestation proxy)       │
+│  └─ Your Application                             │
+│                                                  │
+└──────────────────────────────────────────────────┘</code></pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="quick-links">
+                <a href="getting-started.html" class="btn btn-primary">Get Started</a>
+                <a href="capsule-yaml.html" class="btn btn-secondary">capsule.yaml Reference</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

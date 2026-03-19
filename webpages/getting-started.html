@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Getting started with Nova Enclave Capsule — install, configure, build, and run your first enclave app.">
+    <title>Getting Started — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Guide</div>
+            <h1 class="gradient-text">Getting Started</h1>
+            <p class="lead">Use Nova Platform for the fastest developer path, or follow this page for the self-hosted Nitro path.</p>
+
+            <div class="quick-links">
+                <a href="https://sparsity.cloud" target="_blank" rel="noreferrer" class="btn btn-primary">Use Nova Platform</a>
+                <a href="nitro-setup.html" class="btn btn-secondary">Self-Hosted Host Setup</a>
+                <a href="minimal-example.html" class="btn btn-secondary">Open Minimal Example</a>
+            </div>
+        </section>
+
+        <div class="callout">
+            <h4>Nova Platform — the fastest path</h4>
+            <p>If you want a fully managed deployment experience (build, deploy, attest, verify), use <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">Nova Platform</a>. This guide covers the self-hosted path using <code>capsule-cli</code> directly on your own infrastructure.</p>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Prerequisites -->
+        <section class="section" id="prerequisites">
+            <div class="section-header">
+                <h2>Prerequisites</h2>
+            </div>
+
+            <div class="doc-grid">
+                <div class="doc-card">
+                    <h3>Nitro-Enabled EC2 Instance</h3>
+                    <p>An enclave-capable instance type (e.g., <code>m5.xlarge</code>, <code>c5.2xlarge</code>, or larger). See <a href="nitro-setup.html">Nitro Host Setup</a> for full preparation.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Docker</h3>
+                    <p>Docker Engine installed on the host. Your application must be packaged as a Docker image.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>capsule-cli</h3>
+                    <p>The Capsule CLI binary for <code>x86_64-linux</code>. Download from <a href="https://github.com/sparsity-xyz/nova-enclave-capsule/releases" target="_blank" rel="noreferrer">GitHub Releases</a> or build from source.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Install capsule-cli -->
+        <section class="section" id="install">
+            <div class="section-header">
+                <h2>Step 1: Install capsule-cli</h2>
+            </div>
+
+            <h3>Option A: Download release binary</h3>
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Download and install</div>
+<pre><code># Download the latest release
+curl -LO https://github.com/sparsity-xyz/nova-enclave-capsule/releases/latest/download/capsule-cli-x86_64-unknown-linux-musl.tar.gz
+
+# Extract
+tar xzf capsule-cli-x86_64-unknown-linux-musl.tar.gz
+
+# Move to PATH
+sudo mv capsule-cli /usr/local/bin/
+
+# Verify
+capsule-cli --version</code></pre>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Option B: Use the install script</h3>
+            <div class="code-box-wrapper">
+                <div class="code-box-header">install.sh</div>
+<pre><code># From the repository root
+./install.sh</code></pre>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Option C: Build from source</h3>
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Build with cross-compilation</div>
+<pre><code># Install cross (for musl builds)
+cargo install cross
+
+# Build
+cd capsule-cli
+cross build --release --target x86_64-unknown-linux-musl \
+  --features run_enclave,capsule-runtime
+
+# Binary at: target/x86_64-unknown-linux-musl/release/capsule-cli</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Prepare your app -->
+        <section class="section" id="app">
+            <div class="section-header">
+                <h2>Step 2: Prepare Your Docker App</h2>
+                <p>Your application must be a working Docker image. Capsule doesn't change how you write your app — it wraps it.</p>
+            </div>
+
+            <div class="two-column">
+                <div>
+                    <h3>Application requirements</h3>
+                    <ul style="padding-left: 1.5rem; color: var(--text-muted);">
+                        <li>Standard Docker image with a working entrypoint</li>
+                        <li>Listens on TCP ports for incoming requests</li>
+                        <li>Uses HTTP/HTTPS for outbound calls (not raw TCP)</li>
+                        <li>Works with the standard proxy environment variables if outbound access is needed</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Optional: Use Capsule APIs</h3>
+                    <ul style="padding-left: 1.5rem; color: var(--text-muted);">
+                        <li>HTTP requests to <code>127.0.0.1:18000</code> for attestation, signing, encryption</li>
+                        <li>Use the <a href="api-reference.html#mock">mock service</a> for local development</li>
+                        <li>Switch to real API inside enclave with environment variable detection</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="callout" style="margin-top: 2rem;">
+                <h4>Recommended pattern for local / enclave switching</h4>
+                <p>Set <code>IN_ENCLAVE=true</code> in your Dockerfile's <code>ENV</code>. In local dev, omit or set to <code>false</code>. Your app reads this to choose between mock and real Capsule API base URL.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Python example: choose API base URL</div>
+<pre><code>import os
+
+IN_ENCLAVE = os.getenv("IN_ENCLAVE", "false").lower() == "true"
+CAPSULE_API_MOCK_URL = os.getenv("CAPSULE_API_MOCK_URL", "http://localhost:18000")
+CAPSULE_API_BASE_URL = "http://127.0.0.1:18000" if IN_ENCLAVE else CAPSULE_API_MOCK_URL</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Write manifest -->
+        <section class="section" id="manifest">
+            <div class="section-header">
+                <h2>Step 3: Write capsule.yaml</h2>
+                <p>The manifest tells Capsule how to build and run your enclave application.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Minimal capsule.yaml</div>
+<pre><code>version: v1
+name: "my-app"
+target: "my-app-enclave:latest"
+
+sources:
+  app: "my-app:latest"
+
+defaults:
+  cpu_count: 2
+  memory_mb: 4096
+
+ingress:
+  - listen_port: 8080
+
+egress:
+  allow:
+    - "api.example.com"
+
+api:
+  listen_port: 18000</code></pre>
+                <div class="code-note">
+                    <code>sources.app</code> is the only required image. Capsule Runtime and Shell images are pulled from the public registry by default. See <a href="capsule-yaml.html">capsule.yaml reference</a> for all options.
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Build -->
+        <section class="section" id="build">
+            <div class="section-header">
+                <h2>Step 4: Build the Capsule Image</h2>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Build</div>
+<pre><code># Make sure your app image is available locally
+docker build -t my-app:latest .
+
+# Build the capsule image
+capsule-cli build -f capsule.yaml</code></pre>
+                <div class="code-note">
+                    This produces an image tagged as the <code>target</code> value from your manifest (e.g., <code>my-app-enclave:latest</code>). The image contains the Capsule Shell, the EIF, and your manifest.
+                </div>
+            </div>
+
+            <div class="callout" style="margin-top: 2rem;">
+                <h4>What happens during build</h4>
+                <p>1. Your app image is amended with Capsule Runtime binary and manifest.<br>
+                2. <code>nitro-cli build-enclave</code> converts it into an EIF (Enclave Image File).<br>
+                3. The EIF is packaged into the Capsule Shell base image as the final release artifact.</p>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Run -->
+        <section class="section" id="run">
+            <div class="section-header">
+                <h2>Step 5: Run the Enclave</h2>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Run on a Nitro-enabled host</div>
+<pre><code># Basic run
+sudo capsule-cli run my-app-enclave:latest
+
+# With port mapping
+sudo capsule-cli run my-app-enclave:latest -p 8080:8080
+
+# With debug console
+sudo capsule-cli run my-app-enclave:latest -p 8080:8080 -d
+
+# With resource overrides
+sudo capsule-cli run my-app-enclave:latest \
+  --cpu-count 4 --memory-mb 8192 \
+  -p 8080:8080
+
+# With host-backed mount
+sudo capsule-cli run my-app-enclave:latest \
+  -p 8080:8080 \
+  --mount appdata=/var/lib/my-app/data</code></pre>
+            </div>
+
+            <div class="specs-grid" style="margin-top: 2rem;">
+                <div class="spec-item">
+                    <div class="spec-label">Default CPU</div>
+                    <div class="spec-value">2 vCPUs</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Default Memory</div>
+                    <div class="spec-value">4096 MiB</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">API Port</div>
+                    <div class="spec-value">18000</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Aux API</div>
+                    <div class="spec-value">18001</div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Verify -->
+        <section class="section" id="verify">
+            <div class="section-header">
+                <h2>Verify It Works</h2>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Quick verification</div>
+<pre><code># Check if the app responds
+curl http://localhost:8080/health
+
+# If your app calls the Capsule API, verify from inside the enclave:
+# The app can reach http://127.0.0.1:18000/v1/eth/address
+# and http://127.0.0.1:18000/v1/random</code></pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>What's Next</h2>
+            </div>
+            <div class="reference-grid">
+                <a href="app-template.html" class="reference-card">
+                    <h3>App Template</h3>
+                    <p>Start from the official template for a production-ready scaffold with best practices built in.</p>
+                </a>
+                <a href="examples.html" class="reference-card">
+                    <h3>Examples</h3>
+                    <p>Browse working examples that demonstrate egress, API usage, storage, and more.</p>
+                </a>
+                <a href="capsule-yaml.html" class="reference-card">
+                    <h3>capsule.yaml Reference</h3>
+                    <p>Full manifest schema with all configuration options explained.</p>
+                </a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

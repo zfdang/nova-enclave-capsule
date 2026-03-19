@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Set up an AWS EC2 instance with Nitro Enclave support for running Capsule applications.">
+    <title>Nitro Host Setup — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Guide</div>
+            <h1 class="gradient-text">Nitro Host Setup</h1>
+            <p class="lead">Prepare an EC2 parent instance so it can run Capsule enclave applications reliably.</p>
+        </section>
+
+        <div class="callout">
+            <h4>Recommended first</h4>
+            <p>If you do not specifically need to self-manage the EC2 parent instance, use <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">Nova Platform</a>. This page is for the heavier self-hosted path where you own hugepages, allocator sizing, reboot order, and host validation.</p>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Instance Requirements -->
+        <section class="section" id="requirements">
+            <div class="section-header">
+                <h2>Instance Requirements</h2>
+            </div>
+
+            <div class="specs-grid">
+                <div class="spec-item">
+                    <div class="spec-label">Platform</div>
+                    <div class="spec-value">AWS x86_64</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Instance Type</div>
+                    <div class="spec-value">*.xlarge+</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Enclave Support</div>
+                    <div class="spec-value">Enabled</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">OS</div>
+                    <div class="spec-value">Amazon Linux 2023</div>
+                </div>
+            </div>
+
+            <div class="callout">
+                <h4>Enclave-capable instance types</h4>
+                <p>Most <code>*.xlarge</code> and larger metal/virtualized instances support Nitro Enclaves. Common choices: <code>m5.xlarge</code>, <code>c5.2xlarge</code>, <code>r5.xlarge</code>, <code>m6i.xlarge</code>. The instance must be launched with "Nitro Enclave" support enabled in EC2 settings.</p>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Step-by-step Setup -->
+        <section class="section" id="setup">
+            <div class="section-header">
+                <h2>Setup Steps</h2>
+                <p>Complete these steps on a fresh EC2 instance with Nitro Enclave support enabled.</p>
+            </div>
+
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Install Nitro Enclaves packages</h3>
+                        <p>Install the AWS Nitro Enclaves CLI and allocator service first, before you start preparing Docker images.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Install Nitro CLI and allocator</div>
+<pre><code># Amazon Linux 2023
+sudo dnf install -y aws-nitro-enclaves-cli aws-nitro-enclaves-cli-devel
+
+# Add your user to the ne group
+sudo usermod -aG ne $USER
+sudo usermod -aG docker $USER
+
+# Enable services
+sudo systemctl enable nitro-enclaves-allocator.service
+sudo systemctl enable docker</code></pre>
+            </div>
+
+            <div class="steps-v2" style="margin-top: 2rem;">
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Reboot once, then reserve memory as early as possible</h3>
+                        <p>After package install and group changes, reboot the host. On the fresh boot, set allocator memory and hugepages before you start memory-heavy services, builds, or large Docker pulls.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Write /etc/nitro_enclaves/allocator.yaml</div>
+<pre><code># Example: reserve 12 GiB and 4 vCPUs for enclaves
+sudo tee /etc/nitro_enclaves/allocator.yaml >/dev/null <<'EOF'
+memory_mib: 12288
+cpu_count: 4
+EOF</code></pre>
+                <div class="code-note">
+                    <code>memory_mib</code> and <code>cpu_count</code> define the maximum host-side pool available to enclaves. Individual Capsule runs must fit inside that pool.
+                </div>
+            </div>
+
+            <div class="steps-v2" style="margin-top: 2rem;">
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Inspect hugepage state and activate the allocator</h3>
+                        <p>Check the current page pool, enable the allocator service, and verify the reservation after it applies.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Inspect and apply the reservation</div>
+<pre><code># Show current hugepage state
+grep -E 'MemTotal|HugePages_Total|HugePages_Free|Hugepagesize' /proc/meminfo
+ls /sys/kernel/mm/hugepages
+for d in /sys/kernel/mm/hugepages/hugepages-*; do
+  echo "$(basename "$d") nr=$(cat "$d/nr_hugepages") free=$(cat "$d/free_hugepages")"
+done
+
+# First activation
+sudo systemctl enable --now nitro-enclaves-allocator.service
+
+# If allocator.yaml changes later
+sudo systemctl restart nitro-enclaves-allocator.service
+
+# Verify again after the service runs
+grep -E 'HugePages_Total|HugePages_Free|Hugepagesize' /proc/meminfo</code></pre>
+            </div>
+
+            <div class="steps-v2" style="margin-top: 2rem;">
+                <div class="step-card">
+                    <span class="step-tag">04</span>
+                    <div>
+                        <h3>Install Docker</h3>
+                        <p>Docker is required for building and running capsule images.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Install Docker</div>
+<pre><code># Amazon Linux 2023
+sudo dnf install -y docker
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Verify
+docker --version</code></pre>
+            </div>
+
+            <div class="steps-v2" style="margin-top: 2rem;">
+                <div class="step-card">
+                    <span class="step-tag">05</span>
+                    <div>
+                        <h3>Install capsule-cli</h3>
+                        <p>Download the CLI binary and verify the installation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Install capsule-cli</div>
+<pre><code># Download latest release
+curl -LO https://github.com/sparsity-xyz/nova-enclave-capsule/releases/latest/download/capsule-cli-x86_64-unknown-linux-musl.tar.gz
+tar xzf capsule-cli-x86_64-unknown-linux-musl.tar.gz
+sudo mv capsule-cli /usr/local/bin/
+
+# Verify
+capsule-cli --version</code></pre>
+            </div>
+
+            <div class="steps-v2" style="margin-top: 2rem;">
+                <div class="step-card">
+                    <span class="step-tag">06</span>
+                    <div>
+                        <h3>Verify after reboot and before enclave launch</h3>
+                        <p>After every reboot, confirm that Docker, allocator state, and hugepages are still correct before you try to launch an enclave.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Verify complete setup</div>
+<pre><code># Reboot
+sudo reboot
+
+# After reboot, verify:
+# 1. Docker running
+docker info
+
+# 2. Nitro Enclaves allocator running
+sudo systemctl status nitro-enclaves-allocator
+
+# 3. Hugepages allocated
+grep -E 'HugePages_Total|HugePages_Free|Hugepagesize' /proc/meminfo
+
+# 4. User in correct groups
+groups  # should include: ne docker
+
+# 5. capsule-cli available
+capsule-cli --version</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Hugepage Troubleshooting -->
+        <section class="section" id="hugepages">
+            <div class="section-header">
+                <h2>Hugepage Configuration Details</h2>
+                <p>Use these commands when you need to inspect or adjust the page pool directly at the Linux layer.</p>
+            </div>
+
+            <div class="two-column">
+                <div>
+                    <h3>2 MiB Hugepages</h3>
+                    <div class="code-box-wrapper no-top-margin">
+                        <div class="code-box-header">Set and verify</div>
+<pre><code># Example: 6144 pages * 2 MiB = 12288 MiB
+echo 6144 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+# Verify
+cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+grep Hugepagesize /proc/meminfo</code></pre>
+                    </div>
+                </div>
+                <div>
+                    <h3>1 GiB Hugepages</h3>
+                    <div class="code-box-wrapper no-top-margin">
+                        <div class="code-box-header">Set and verify</div>
+<pre><code># Example: 12 pages * 1024 MiB = 12288 MiB
+echo 12 | sudo tee /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
+
+# Verify
+cat /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="troubleshooting-box">
+                <h4>Troubleshooting Hugepages</h4>
+                <ul>
+                    <li><strong>Set hugepages right after reboot</strong>: this is the safest moment because large page reservations are easier before the host becomes busy.</li>
+                    <li><strong>Not enough hugepages</strong>: increase <code>memory_mib</code> in <code>/etc/nitro_enclaves/allocator.yaml</code>, restart the allocator service, and verify the counters again.</li>
+                    <li><strong>Allocation fails</strong>: the host may not have enough contiguous memory left for the requested page pool.</li>
+                    <li><strong>Enclave fails to start with a memory error</strong>: ensure the free hugepage pool is large enough for <code>memory_mb</code> in your manifest and remember that the host allocator is the hard ceiling.</li>
+                </ul>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- CloudFormation -->
+        <section class="section" id="cloudformation">
+            <div class="section-header">
+                <h2>Automated Setup with CloudFormation</h2>
+                <p>Use the included CloudFormation template for a fully automated host setup.</p>
+            </div>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Deploy the CloudFormation stack</div>
+<pre><code># The template is in the repository at:
+# aws/cloudformation/infrastructure.yml
+
+aws cloudformation create-stack \
+  --stack-name capsule-host \
+  --template-body file://aws/cloudformation/infrastructure.yml \
+  --capabilities CAPABILITY_IAM</code></pre>
+                <div class="code-note">
+                    The CloudFormation template provisions an EC2 instance with Nitro Enclave support, Docker, and all prerequisites pre-configured. Review the template parameters for customization options.
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Security Considerations -->
+        <section class="section" id="security">
+            <div class="section-header">
+                <h2>Security Considerations</h2>
+            </div>
+
+            <div class="doc-grid">
+                <div class="doc-card">
+                    <h3>Instance Network</h3>
+                    <p>Use a VPC with security groups that only expose the ports your application needs. The enclave itself has no direct network access — all traffic passes through the host.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>IAM Roles</h3>
+                    <p>If your capsule uses S3 storage, the host EC2 instance needs an IAM role with appropriate S3 permissions. The enclave accesses IMDS through the egress proxy.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Host Security</h3>
+                    <p>The host is outside the enclave trust boundary. Keep the host patched and minimize the software surface. The enclave protects against host compromise for data in use.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="quick-links">
+                <a href="getting-started.html" class="btn btn-primary">Getting Started</a>
+                <a href="architecture.html" class="btn btn-secondary">View Architecture</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

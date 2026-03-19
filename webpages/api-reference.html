@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Capsule API Reference — HTTP endpoints for attestation, signing, encryption, storage, KMS, and wallet inside the enclave.">
+    <title>Capsule API Reference — Capsule Developer Docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-stack"><div class="logo-box"></div><div class="logo-box blur"></div></div>
+            <div><h1>Capsule Docs</h1></div>
+        </div>
+        <nav id="nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="why-capsule.html" class="nav-link">Why Capsule</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Guides</div>
+            <a href="getting-started.html" class="nav-link">Getting Started</a>
+            <a href="app-template.html" class="nav-link">App Template</a>
+            <a href="examples.html" class="nav-link">Examples</a>
+            <a href="nitro-setup.html" class="nav-link">Nitro Host Setup</a>
+            <div class="nav-divider"></div>
+            <div class="nav-section-label">Reference</div>
+            <a href="capsule-yaml.html" class="nav-link">capsule.yaml</a>
+            <a href="api-reference.html" class="nav-link">Capsule API</a>
+            <a href="cli-reference.html" class="nav-link">CLI Reference</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <section class="section hero">
+            <div class="badge">Reference</div>
+            <h1 class="gradient-text">Capsule API</h1>
+            <p class="lead">HTTP API endpoints available to your application at <code>127.0.0.1:18000</code> inside the enclave.</p>
+            <p>The Capsule API consists of two services: the <strong>Primary API</strong> (full <code>/v1/*</code> surface) and the <strong>Aux API</strong> (restricted attestation proxy). Both bind to <code>127.0.0.1</code> only, with a 10 MiB request body limit.</p>
+        </section>
+
+        <hr class="divider">
+
+        <!-- API Overview -->
+        <section class="section" id="overview">
+            <div class="section-header">
+                <h2>Endpoint Overview</h2>
+            </div>
+
+            <div class="api-list">
+                <div class="api-group">
+                    <div class="api-group-title">Ethereum</div>
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/v1/eth/address</span>
+                        <span class="api-desc">Enclave Ethereum address and secp256k1 public key</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/eth/sign</span>
+                        <span class="api-desc">Sign a UTF-8 string with personal-sign prefix</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/eth/sign-tx</span>
+                        <span class="api-desc">Sign an EIP-1559 transaction (structured or raw RLP)</span>
+                    </div>
+                </div>
+
+                <div class="api-group">
+                    <div class="api-group-title">Random &amp; Attestation</div>
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/v1/random</span>
+                        <span class="api-desc">32 NSM-backed cryptographically secure random bytes</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/attestation</span>
+                        <span class="api-desc">NSM attestation document (CBOR), optional custom user_data</span>
+                    </div>
+                </div>
+
+                <div class="api-group">
+                    <div class="api-group-title">Encryption (P-384 ECDH + AES-256-GCM)</div>
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/v1/encryption/public_key</span>
+                        <span class="api-desc">Enclave P-384 public key (DER and PEM formats)</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/encryption/decrypt</span>
+                        <span class="api-desc">Decrypt client data (rejects nonce reuse)</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/encryption/encrypt</span>
+                        <span class="api-desc">Encrypt response data back to the client</span>
+                    </div>
+                </div>
+
+                <div class="api-group">
+                    <div class="api-group-title">S3 Storage (requires <code>storage.s3.enabled: true</code>)</div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/s3/get</span>
+                        <span class="api-desc">Retrieve an object from the configured S3 bucket</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/s3/put</span>
+                        <span class="api-desc">Store an object in the configured S3 bucket</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/s3/delete</span>
+                        <span class="api-desc">Delete an object from the configured S3 bucket</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/s3/list</span>
+                        <span class="api-desc">List objects with pagination support</span>
+                    </div>
+                </div>
+
+                <div class="api-group">
+                    <div class="api-group-title">Nova KMS (requires <code>kms_integration.enabled: true</code>)</div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/kms/derive</span>
+                        <span class="api-desc">Derive key material (app/session/alpha paths)</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/kms/kv/get</span>
+                        <span class="api-desc">Get value from KMS key-value storage</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/kms/kv/put</span>
+                        <span class="api-desc">Put value into KMS key-value storage</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/kms/kv/delete</span>
+                        <span class="api-desc">Delete value from KMS key-value storage</span>
+                    </div>
+                </div>
+
+                <div class="api-group">
+                    <div class="api-group-title">App Wallet (requires <code>kms_integration.use_app_wallet: true</code>)</div>
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <span class="api-path">/v1/app-wallet/address</span>
+                        <span class="api-desc">Wallet address and app ID</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/app-wallet/sign</span>
+                        <span class="api-desc">Sign with the app wallet key</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-path">/v1/app-wallet/sign-tx</span>
+                        <span class="api-desc">Sign a transaction with the app wallet key</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Ethereum APIs -->
+        <section class="section" id="eth">
+            <div class="section-header">
+                <h2>Ethereum APIs</h2>
+            </div>
+
+            <h3>GET /v1/eth/address</h3>
+            <p>Returns the enclave's Ethereum address and secp256k1 public key. The key is deterministic per enclave instance lifetime.</p>
+
+            <div class="two-column">
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Request</div>
+<pre><code>GET http://127.0.0.1:18000/v1/eth/address</code></pre>
+                </div>
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Response</div>
+<pre><code>{
+  "address": "0x1234...abcd",
+  "public_key": "0x04..."
+}</code></pre>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">POST /v1/eth/sign</h3>
+            <p>Signs a UTF-8 string using the Ethereum personal-sign prefix.</p>
+
+            <div class="two-column">
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Request</div>
+<pre><code>POST http://127.0.0.1:18000/v1/eth/sign
+Content-Type: application/json
+
+{
+  "message": "Hello, World!"
+}</code></pre>
+                </div>
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Response</div>
+<pre><code>{
+  "signature": "0x..."
+}</code></pre>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">POST /v1/eth/sign-tx</h3>
+            <p>Signs an EIP-1559 transaction. Accepts structured fields or raw RLP.</p>
+
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Request — structured fields</div>
+<pre><code>POST http://127.0.0.1:18000/v1/eth/sign-tx
+Content-Type: application/json
+
+{
+  "chain_id": 84532,
+  "nonce": 0,
+  "to": "0xRecipientAddress",
+  "value": "0x0",
+  "data": "0x",
+  "max_fee_per_gas": "0x59682F00",
+  "max_priority_fee_per_gas": "0x3B9ACA00",
+  "gas_limit": 21000
+}</code></pre>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Encryption -->
+        <section class="section" id="encryption">
+            <div class="section-header">
+                <h2>Encryption APIs</h2>
+                <p>End-to-end encryption between client and enclave using P-384 ECDH + HKDF-SHA256 + AES-256-GCM.</p>
+            </div>
+
+            <div class="callout">
+                <h4>Cryptographic Protocol</h4>
+                <p><strong>Key agreement:</strong> P-384 ECDH &nbsp;|&nbsp; <strong>KDF:</strong> HKDF-SHA256 &nbsp;|&nbsp; <strong>Cipher:</strong> AES-256-GCM &nbsp;|&nbsp; <strong>Nonce:</strong> 12 bytes</p>
+                <p><strong>HKDF info string:</strong> <code>"capsule-ecdh-aes256gcm-v1"</code></p>
+                <p><strong>Salt derivation:</strong> sort lexicographically(client_pub_sec1, enclave_pub_sec1) || nonce</p>
+            </div>
+
+            <h3 style="margin-top: 2rem;">GET /v1/encryption/public_key</h3>
+            <div class="code-box-wrapper">
+                <div class="code-box-header">Response</div>
+<pre><code>{
+  "public_key_der": "0x3076...",
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+}</code></pre>
+            </div>
+
+            <h3 style="margin-top: 2rem;">POST /v1/encryption/decrypt</h3>
+            <div class="two-column">
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Request</div>
+<pre><code>{
+  "nonce": "0x...",
+  "client_public_key": "0x...",
+  "encrypted_data": "0x..."
+}</code></pre>
+                </div>
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Response</div>
+<pre><code>{
+  "plaintext": "decrypted string"
+}</code></pre>
+                </div>
+            </div>
+            <div class="code-note" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                Hex values may include or omit the <code>0x</code> prefix. <code>client_public_key</code> is DER/SPKI format. Plaintext must be valid UTF-8. Duplicate <code>(client_public_key, nonce)</code> pairs are rejected.
+            </div>
+
+            <h3 style="margin-top: 2rem;">POST /v1/encryption/encrypt</h3>
+            <div class="two-column">
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Request</div>
+<pre><code>{
+  "plaintext": "string to encrypt",
+  "client_public_key": "0x..."
+}</code></pre>
+                </div>
+                <div class="code-box-wrapper no-top-margin">
+                    <div class="code-box-header">Response</div>
+<pre><code>{
+  "encrypted_data": "a1b2c3...",
+  "enclave_public_key": "3076...",
+  "nonce": "d4e5f6..."
+}</code></pre>
+                </div>
+            </div>
+            <div class="code-note" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                Response values use raw hex <strong>without</strong> the <code>0x</code> prefix.
+            </div>
+
+            <h3 style="margin-top: 2.5rem;">Client Integration Flow</h3>
+            <div class="steps-v2">
+                <div class="step-card">
+                    <span class="step-tag">01</span>
+                    <div>
+                        <h3>Get enclave public key</h3>
+                        <p><code>GET /v1/encryption/public_key</code> or extract from attestation document.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">02</span>
+                    <div>
+                        <h3>Generate client P-384 keypair</h3>
+                        <p>Create an ephemeral P-384 key pair on the client side.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">03</span>
+                    <div>
+                        <h3>Derive shared secret</h3>
+                        <p>ECDH(client_private, enclave_public) → HKDF-SHA256 with sorted public keys and nonce as salt.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <span class="step-tag">04</span>
+                    <div>
+                        <h3>Encrypt and send</h3>
+                        <p>Generate a fresh 12-byte nonce per message. Encrypt with AES-256-GCM. Send ciphertext, nonce, and client DER public key to <code>/v1/encryption/decrypt</code>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- S3 -->
+        <section class="section" id="s3">
+            <div class="section-header">
+                <h2>S3 Storage APIs</h2>
+                <p>Requires <code>storage.s3.enabled: true</code> in capsule.yaml. Egress access to IMDS (<code>169.254.169.254</code>) and S3 endpoints is required.</p>
+            </div>
+
+            <div class="two-column">
+                <div>
+                    <h3>POST /v1/s3/put</h3>
+                    <div class="code-box-wrapper no-top-margin">
+<pre><code>{
+  "key": "data/record.json",
+  "body": "{\"id\": 1, \"name\": \"test\"}"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">POST /v1/s3/get</h3>
+                    <div class="code-box-wrapper no-top-margin">
+<pre><code>{
+  "key": "data/record.json"
+}</code></pre>
+                    </div>
+                </div>
+                <div>
+                    <h3>POST /v1/s3/delete</h3>
+                    <div class="code-box-wrapper no-top-margin">
+<pre><code>{
+  "key": "data/record.json"
+}</code></pre>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem;">POST /v1/s3/list</h3>
+                    <div class="code-box-wrapper no-top-margin">
+<pre><code>{
+  "prefix": "data/",
+  "max_keys": 100,
+  "continuation_token": null
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout" style="margin-top: 2rem;">
+                <h4>Key Path Security</h4>
+                <p>All keys are prefixed with the configured <code>storage.s3.prefix</code>. Keys containing <code>..</code> or absolute paths are rejected. When <code>encryption.mode: kms</code> is used, objects are automatically encrypted with KMS-derived keys.</p>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Aux API -->
+        <section class="section" id="aux">
+            <div class="section-header">
+                <h2>Auxiliary API</h2>
+                <p>A restricted proxy on port <code>18001</code> (default, or <code>api_port + 1</code>). Required for external attestation flows.</p>
+            </div>
+
+            <div class="doc-grid">
+                <div class="doc-card">
+                    <h3>Purpose</h3>
+                    <p>The Aux API provides a safe attestation endpoint for external clients. It forwards <code>POST /v1/attestation</code> to the Primary API but sanitizes the response by removing the <code>public_key</code> field.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>When to Expose</h3>
+                    <p>Add the Aux API port to your <code>ingress</code> list when external clients need to fetch attestation documents. Never expose the Primary API port externally.</p>
+                </div>
+                <div class="doc-card">
+                    <h3>Configuration</h3>
+                    <p>Set <code>aux_api.listen_port</code> in capsule.yaml. Defaults to the primary API port + 1 if omitted.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Mock Service -->
+        <section class="section" id="mock">
+            <div class="section-header">
+                <h2>Mock Service for Development</h2>
+                <p>Develop locally without running a real enclave.</p>
+            </div>
+
+            <div class="callout">
+                <h4>External Mock Endpoint</h4>
+                <p>Available at <code>http://capsule-runtime.sparsity.cloud:18000/</code> — hosted by the Nova Platform team. Not version-locked to your Capsule Runtime. Use for lightweight development only.</p>
+            </div>
+
+            <div class="code-box-wrapper" style="margin-top: 2rem;">
+                <div class="code-box-header">Usage pattern</div>
+<pre><code># In your application:
+# Set CAPSULE_API_MOCK_URL environment variable to point to the mock
+# When IN_ENCLAVE is not set, use CAPSULE_API_MOCK_URL
+# When IN_ENCLAVE=true, use http://127.0.0.1:18000
+
+# Quick test:
+curl http://capsule-runtime.sparsity.cloud:18000/v1/eth/address
+curl http://capsule-runtime.sparsity.cloud:18000/v1/random</code></pre>
+            </div>
+
+            <div class="callout warning" style="margin-top: 2rem;">
+                <h4>Mock Limitations</h4>
+                <p>Not all endpoints may be available. Response formats may differ from the real API. Error codes and edge-case behavior may not match. Always verify against a real enclave before production.</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="quick-links">
+                <a href="capsule-yaml.html" class="btn btn-primary">capsule.yaml Reference</a>
+                <a href="cli-reference.html" class="btn btn-secondary">CLI Reference</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Nova Enclave Capsule</span>
+                <div class="footer-links">
+                    <a href="https://github.com/sparsity-xyz/nova-enclave-capsule" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://sparsity.cloud" target="_blank" rel="noreferrer">sparsity.cloud</a>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 Sparsity. All rights reserved.</div>
+        </footer>
+    </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
