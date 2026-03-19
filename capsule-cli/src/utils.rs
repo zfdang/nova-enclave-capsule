@@ -39,6 +39,7 @@ pub fn init_logging(verbosity: u8) {
         .filter_module("bollard", level_filter(verbosity.saturating_sub(1)))
         .filter_module("hyper", level_filter(verbosity.saturating_sub(2)))
         .filter_module("helios", LevelFilter::Warn)
+        .filter_module("alloy_transport_http", LevelFilter::Warn)
         .filter_module("tokio", level_filter(verbosity.saturating_sub(3)))
         .filter_module("tracing", level_filter(verbosity.saturating_sub(3)))
         .filter_level(level_filter(verbosity))
